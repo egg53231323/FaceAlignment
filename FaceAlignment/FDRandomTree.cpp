@@ -2,13 +2,14 @@
 #include "FDRandomTree.h"
 #include "FDUtility.h"
 #include <fstream>
-#include <queue>
+#include <stack>
 
 FDNode::FDNode()
 {
 	mChildrenNodesId[0] = 0;
 	mChildrenNodesId[1] = 0;
 	mDepth = 0;
+	mLeafNodeId = -1;
 	mThreshold = 0;
 	mFeature[0] = 0;
 	mFeature[1] = 0;
@@ -23,6 +24,7 @@ void FDNode::Print()
 		<< "mChildrenNodesId[0]: " << mChildrenNodesId[0] 
 		<< "mChildrenNodesId[1]: " << mChildrenNodesId[1] 
 		<< "mThreshold: "<< mThreshold 
+		<< "mLeafNodeId: " << mLeafNodeId
 		<< "mFeature[0]: " << mFeature[0] 
 		<< "mFeature[1]: " << mFeature[1] 
 		<< "mFeature[2]: " << mFeature[2] 
@@ -34,6 +36,7 @@ void FDNode::Read(std::ifstream& fs)
 {
 	fs.read((char *)mChildrenNodesId, sizeof(int) * 2);
 	fs.read((char *)&mDepth, sizeof(int));
+	fs.read((char *)&mLeafNodeId, sizeof(int));
 	fs.read((char *)&mThreshold, sizeof(double));
 	fs.read((char *)mFeature, sizeof(double) * 4);
 }
@@ -42,6 +45,7 @@ void FDNode::Write(std::ofstream& fs)
 {
 	fs.write((const char *)mChildrenNodesId, sizeof(int) * 2);
 	fs.write((const char *)&mDepth, sizeof(int));
+	fs.write((const char *)&mLeafNodeId, sizeof(int));
 	fs.write((const char *)&mThreshold, sizeof(double));
 	fs.write((const char *)mFeature, sizeof(double)*4);
 }
@@ -51,6 +55,7 @@ FDRandomTree::FDRandomTree()
 	mLandmarkID = 0;
 	mMaxDepth = 5;
 	mMaxNodesNum = (int)(pow(2, mMaxDepth) - 1);
+	mLeafNodeNum = 0;
 
 	mFeatureGenerateCount = 500;
 	mFeatureGenerateRadius = 0.4;
@@ -75,6 +80,7 @@ void FDRandomTree::SetParam(int maxDepth, int featureGenerateCount, double featu
 
 void FDRandomTree::Train(const FDTrainData &trainData, const std::vector<int> vecSampleIndex)
 {
+	mLeafNodeNum = 0;
 	const std::vector<FDTrainDataItem> &vecTrainDataItem = trainData.mVecDataItems;
 	int sampleCount = (int)vecSampleIndex.size();
 	cv::Mat_<double> shapeResidual(sampleCount, 2);
@@ -101,22 +107,28 @@ void FDRandomTree::Train(const FDTrainData &trainData, const std::vector<int> ve
 	lchildren.reserve(vecSampleIndex.size());
 	rchildren.reserve(vecSampleIndex.size());
 
-	std::queue<int> queueNodeToSplit;
-	queueNodeToSplit.push(0);
+	std::stack<int> stackNodeToSplit;
+	stackNodeToSplit.push(0);
 	int splitNodeId = 0;
-	while (!queueNodeToSplit.empty())
+	while (!stackNodeToSplit.empty())
 	{
-		splitNodeId = queueNodeToSplit.front();
-		queueNodeToSplit.pop();
+		splitNodeId = stackNodeToSplit.top();
+		stackNodeToSplit.pop();
 
 		FDNode &currentNode = mVecNodes[splitNodeId];
 		std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[splitNodeId];
 		if (currentNode.mDepth == mMaxDepth)
 		{
+			currentNode.mLeafNodeId = mLeafNodeNum++;
 			continue;
 		}
 
 		SplitNode(trainData, currentSampleIndex, shapeResidual, threshold, nodeFeature, lchildren, rchildren);
+		if (lchildren.empty() || rchildren.empty())
+		{
+			currentNode.mLeafNodeId = mLeafNodeNum++;
+			continue;
+		}
 	
 		// update current node feature and child id
 		currentNode.mChildrenNodesId[0] = newNodeId;
@@ -138,8 +150,8 @@ void FDRandomTree::Train(const FDTrainData &trainData, const std::vector<int> ve
 		vecAllNodeSampleIndex[newNodeId + 1].swap(rchildren);
 
 		// add child to split queue
-		queueNodeToSplit.push(newNodeId);
-		queueNodeToSplit.push(newNodeId + 1);
+		stackNodeToSplit.push(newNodeId + 1);
+		stackNodeToSplit.push(newNodeId);
 
 		newNodeId += 2;
 	}
@@ -227,9 +239,9 @@ void FDRandomTree::SplitNode(const FDTrainData &trainData, const std::vector<int
 	double varLeft = 0;
 	double varRight = 0;
 	double varReduce = 0;
-	double maxVarReduce = std::numeric_limits<double>::min();
+	double maxVarReduce = 0;
 	double tempThreshold = 0;
-	int maxVarReduceId = 0;
+	int maxVarReduceId = -1;
 	for (int i = 0; i < mFeatureGenerateCount; i++)
 	{
 		lc1.clear();
@@ -253,10 +265,13 @@ void FDRandomTree::SplitNode(const FDTrainData &trainData, const std::vector<int
 			}
 		}
 
+		if (lc1.empty() || rc1.empty())
+			continue;
+
 		varLeft = (CalcVar(lc1) + CalcVar(lc2)) * lc1.size();
 		varRight = (CalcVar(rc1) + CalcVar(rc2)) * rc1.size();
 		varReduce = varOverall - varLeft - varRight;
-		if (varReduce > maxVarReduce)
+		if (varReduce > 0 && varReduce > maxVarReduce)
 		{
 			maxVarReduce = varReduce;
 			threshold = tempThreshold;
@@ -264,13 +279,16 @@ void FDRandomTree::SplitNode(const FDTrainData &trainData, const std::vector<int
 		}
 	}
 
-	nodeFeature[0] = randomPointPairs(maxVarReduceId, 0) / mFeatureGenerateRadius;
-	nodeFeature[1] = randomPointPairs(maxVarReduceId, 1) / mFeatureGenerateRadius;
-	nodeFeature[2] = randomPointPairs(maxVarReduceId, 2) / mFeatureGenerateRadius;
-	nodeFeature[3] = randomPointPairs(maxVarReduceId, 3) / mFeatureGenerateRadius;
-
 	leftSampleIndex.clear();
 	rightSampleIndex.clear();
+	if (maxVarReduceId < 0)
+		return;
+
+	nodeFeature[0] = randomPointPairs(maxVarReduceId, 0);
+	nodeFeature[1] = randomPointPairs(maxVarReduceId, 1);
+	nodeFeature[2] = randomPointPairs(maxVarReduceId, 2);
+	nodeFeature[3] = randomPointPairs(maxVarReduceId, 3);
+
 	for (int i = 0; i < sampleCount; i++)
 	{
 		if (densities(maxVarReduceId, i) < threshold)
@@ -289,6 +307,7 @@ void FDRandomTree::Read(std::ifstream& fs)
 	fs.read((char *)&mLandmarkID, sizeof(int));
 	fs.read((char *)&mMaxDepth, sizeof(int));
 	fs.read((char *)&mMaxNodesNum, sizeof(int));
+	fs.read((char *)&mLeafNodeNum, sizeof(int));
 
 	mVecNodes.resize(mMaxNodesNum);
 	for (int i = 0; i < mMaxNodesNum; i++)
@@ -302,6 +321,7 @@ void FDRandomTree::Write(std::ofstream& fs)
 	fs.write((const char *)&mLandmarkID, sizeof(int));
 	fs.write((const char *)&mMaxDepth, sizeof(int));
 	fs.write((const char *)&mMaxNodesNum, sizeof(int));
+	fs.write((const char *)&mLeafNodeNum, sizeof(int));
 
 	for (int i = 0; i < mMaxNodesNum; i++)
 	{

@@ -6,7 +6,7 @@
 
 #define FDLog(fmt, ...) FDUtility::Log(fmt, __VA_ARGS__)
 
-#define FD_TEMP_DIR "E:/work/test/FaceDetection/test/"
+#define FD_TEMP_DIR "E:/work/test/FaceAlignment/test/"
 
 class FDBoundingBox
 {
@@ -65,7 +65,7 @@ public:
 		std::vector<FDTrainDataItem> &vecData, std::vector<std::string> *pVecPath);
 	static cv::Mat_<double> LoadGroundTruthShape(const std::string &filePath);
 	static void AdjustImage(cv::Mat_<uchar> &image, cv::Mat_<double> &ground_truth_shape, FDBoundingBox &boundingBox);
-	static bool IsShapeInRect(const cv::Mat_<double> &shape, const cv::Rect &rect, double scale);
+	static bool IsShapeInRect(const cv::Mat_<double> &shape, const cv::Rect &rect);
 	static bool GetShapeBoundingBox(const cv::Mat_<double> &shape, FDBoundingBox &boundingBox);
 	static bool IsBoundingBoxInRect(const FDBoundingBox &boundingBox, const cv::Rect &rect);
 	static cv::Rect ScaleRect(const cv::Rect &rect, double scale);

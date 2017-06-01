@@ -16,9 +16,9 @@ void TrainModel()
 	std::string strDir = FD_TEMP_DIR;
 	std::string cascadeClassifierModelPath = strDir + "haarcascade_frontalface_alt.xml";
 	std::vector<std::string> vecPath;
-	vecPath.push_back(strDir + "list_afw.txt");
+	//vecPath.push_back(strDir + "list_afw.txt");
 	vecPath.push_back(strDir + "list_helen.txt");
-	vecPath.push_back(strDir + "list_lfpw.txt");
+	//vecPath.push_back(strDir + "list_lfpw.txt");
 
 	std::vector<std::string> vecImgPath;
 	FDUtility::GenerateTrainData(vecPath, cascadeClassifierModelPath, param.mShapeGenerateNumPerSample, trainData, &vecImgPath);
@@ -41,12 +41,12 @@ void TestModel()
 {
 	std::string strDir = FD_TEMP_DIR;
 	std::vector<std::string> vecPath;
-	vecPath.push_back(strDir + "list_test_helen.txt");
-	vecPath.push_back(strDir + "list_test_lfpw.txt");
+	vecPath.push_back(strDir + "list_helen_test.txt");
+	vecPath.push_back(strDir + "list_lfpw_test.txt");
 
 	std::string tempPath;
 	std::vector<std::string> vecImgPath;
-	vecImgPath.push_back("E:/work/test/FaceDetection/TestData/img/1.jpg");
+	vecImgPath.push_back(std::string(FD_TEMP_DIR)+"../TestData/img/1.jpg");
 	int listCount = (int)vecPath.size();
 
 	for (int i = 0; i < listCount; i++)
@@ -111,7 +111,7 @@ void TestWithCamera()
 	FDLocalBinaryFeatureModel model;
 	LoadModel(model);
 
-	std::string strDir = "E:/work/test/eos/data/";
+	std::string strDir = std::string(FD_TEMP_DIR) + "/temp/";
 	std::string strOutputName = "photo";
 	std::string strPath = strDir + strOutputName + ".png";
 	std::string strPathLandmark = strDir + strOutputName +".pts";
@@ -136,12 +136,15 @@ void TestWithCamera()
 		saveFrame = frame.clone();
 		cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
 		std::vector<cv::Mat_<double> > result;
-		if (model.Predict(gray, result))
+		std::vector<FDBoundingBox> vecBox;
+		if (model.Predict(gray, result, &vecBox))
 		{
 			int count = (int)result.size();
 			for (int j = 0; j < count; j++)
 			{
 				FDUtility::DrawShape(result[j], frame, 255);
+				cv::rectangle(frame, cv::Rect(vecBox[j].m_x, vecBox[j].m_y, vecBox[j].m_width, vecBox[j].m_height), cv::Scalar(255, 0, 0));
+				//cv::rectangle(frame, cv::Rect(vecBox[j].m_x-100, vecBox[j].m_y-100, vecBox[j].m_width+200, vecBox[j].m_height+200), cv::Scalar(0, 255, 0));
 			}
 		}
 
@@ -158,7 +161,7 @@ void TestWithCamera()
 
 int main()
 {
-	int type = 2;
+	int type =2;
 	switch (type)
 	{
 	case 0:

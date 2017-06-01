@@ -8,6 +8,7 @@ FDRandomForest::FDRandomForest()
 	mId = 0;
 	mLandmarkNum = 68;
 	mMaxTreeNum = 10;
+	mLeafNodeNum = 0;
 	mSampleOverlapRate = 0.4;
 	mVecTree.resize(mLandmarkNum);
 	for (int i = 0; i < mMaxTreeNum; i++)
@@ -37,15 +38,17 @@ void FDRandomForest::Train(const FDTrainData &trainData)
 {
 	int sampleCount = (int)trainData.mVecDataItems.size();
 	int samplePerTree = (int)((double)(sampleCount) / ((1 - mSampleOverlapRate) * mMaxTreeNum));
-	std::vector<int> vecSampleIndex;
-	vecSampleIndex.reserve(samplePerTree + 1);
 	int indexStart = 0, indexEnd = 0;
+	mLeafNodeNum = 0;
+#ifndef DEBUG
+#pragma omp parallel for
+#endif
 	for (int i = 0; i < mLandmarkNum; i++)
 	{
 		for (int j = 0; j < mMaxTreeNum; j++)
 		{
 			FDLog("train random tree:(stage %d/%d, landmark %d/%d, tree %d/%d)", mId+1, 7, i+1, mLandmarkNum, j+1, mMaxTreeNum);
-			vecSampleIndex.clear();
+			std::vector<int> vecSampleIndex;
 			indexStart = std::max((int)(j * samplePerTree * (1 - mSampleOverlapRate)), 0);
 			indexEnd = std::min(indexStart + samplePerTree, sampleCount);
 			for (int k = indexStart; k < indexEnd; k++)
@@ -55,6 +58,14 @@ void FDRandomForest::Train(const FDTrainData &trainData)
 			mVecTree[i][j].Train(trainData, vecSampleIndex);
 		}
 	}
+
+	for (int i = 0; i < mLandmarkNum; i++)
+	{
+		for (int j = 0; j < mMaxTreeNum; j++)
+		{
+			mLeafNodeNum += mVecTree[i][j].mLeafNodeNum;
+		}
+	}
 }
 
 void FDRandomForest::Read(std::ifstream& fs)
@@ -62,6 +73,7 @@ void FDRandomForest::Read(std::ifstream& fs)
 	fs.read((char *)&mId, sizeof(int));
 	fs.read((char *)&mLandmarkNum, sizeof(int));
 	fs.read((char *)&mMaxTreeNum, sizeof(int));
+	fs.read((char *)&mLeafNodeNum, sizeof(int));
 	fs.read((char *)&mSampleOverlapRate, sizeof(double));
 
 	mVecTree.resize(mLandmarkNum);
@@ -81,6 +93,7 @@ void FDRandomForest::Write(std::ofstream& fs)
 	fs.write((const char *)&mId, sizeof(int));
 	fs.write((const char *)&mLandmarkNum, sizeof(int));
 	fs.write((const char *)&mMaxTreeNum, sizeof(int));
+	fs.write((const char *)&mLeafNodeNum, sizeof(int));
 	fs.write((const char *)&mSampleOverlapRate, sizeof(double));
 
 	for (int i = 0; i < mLandmarkNum; i++)

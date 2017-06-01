@@ -13,6 +13,7 @@ public:
 	//data
 	int mChildrenNodesId[2];
 	int mDepth;
+	int mLeafNodeId;
 	double mThreshold;
 	double mFeature[4];
 
@@ -31,6 +32,7 @@ public:
 	int mMaxDepth;
 	// number of maximum nodes
 	int mMaxNodesNum;
+	int mLeafNodeNum;
 	// tree nodes
 	std::vector<FDNode> mVecNodes;
 

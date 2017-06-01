@@ -11,6 +11,7 @@ public:
 	int mLandmarkNum;
 	// number of tree
 	int mMaxTreeNum;
+	int mLeafNodeNum;
 	// sample ovarlap rate
 	double mSampleOverlapRate;
 	// trees

@@ -5,6 +5,8 @@
 #include <stdarg.h>
 
 //#define SAVE_TRAIN_DATA_TO_FILE 
+//#define ENABLE_LIMIT_TRAIN_DATA_SIZE
+#define LIMIT_TRAIN_DATA_SIZE 200
 
 void FDBoundingBox::CalcCenter()
 {
@@ -111,6 +113,10 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 	for (int i = 0; i < sz; i++)
 	{
 		LoadTrainData(vecFileListPath[i], cascadeClassifierModelPath, srcData, pVecPath);
+#ifdef ENABLE_LIMIT_TRAIN_DATA_SIZE
+		if (((int)srcData.size()) >= LIMIT_TRAIN_DATA_SIZE)
+			break;
+#endif
 	}
 
 	std::vector<FDTrainDataItem> &generateData = trainData.mVecDataItems;
@@ -150,6 +156,13 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 
 
 	CalcMeanShape(trainData);
+	std::vector<FDTrainDataItem> &vecItem = trainData.mVecDataItems;
+	int count = (int)vecItem.size();
+	for (int i = 0; i < count; i++)
+	{
+		FDTrainDataItem &item = vecItem[i];
+		item.mCurrentShape = RelativeToReal(trainData.mMeanShape, item.mBoundingBox);
+}
 
 #ifdef SAVE_TRAIN_DATA_TO_FILE
 	FDTrainDataItem it = trainData.mVecDataItems[0];
@@ -160,7 +173,8 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 
 void FDUtility::OutputItemInfo(FDTrainDataItem &item, const char *path)
 {
-	cv::Mat_<uchar> dst = item.mImage.clone();
+	cv::Mat dst = item.mImage.clone();
+	cv::cvtColor(item.mImage, dst, cv::COLOR_GRAY2BGR);
 	DrawShape(item.mGroundTruthShape, dst, 0);
 	DrawShape(item.mCurrentShape, dst, 255);
 	cv::imwrite(path, dst);
@@ -181,7 +195,6 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 	fin.open(fileListPath);
 
 	cv::CascadeClassifier cascadeClassifier;
-	double scale = 1.3;
 	std::vector<cv::Rect> faces;
 	cv::Mat gray;
 
@@ -198,6 +211,11 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 	bool bUsed = false;
 	for (int imgIndex = 0; imgIndex < imgCount; ++imgIndex)
 	{
+#ifdef ENABLE_LIMIT_TRAIN_DATA_SIZE
+		if (((int)vecData.size()) >= LIMIT_TRAIN_DATA_SIZE)
+			break;
+#endif
+
 		bUsed = false;
 		std::string &imgPath = vecImgPath[imgIndex];
 		imgPath = Replace(imgPath, "\n", "");
@@ -209,11 +227,11 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 		ptsPath.replace(ptsPath.find_last_of("."), 4, ".pts");
 		cv::Mat_<double> groundTruthShape = LoadGroundTruthShape(ptsPath);
 
-		cv::Mat smallImg(cvRound(image.rows / scale), cvRound(image.cols / scale), CV_8UC1);
-		cv::resize(image, smallImg, smallImg.size(), 0, 0, cv::INTER_LINEAR);
-		cv::equalizeHist(smallImg, smallImg);
+		//cv::Mat smallImg(cvRound(image.rows / scale), cvRound(image.cols / scale), CV_8UC1);
+		//cv::resize(image, smallImg, smallImg.size(), 0, 0, cv::INTER_LINEAR);
+		//cv::equalizeHist(smallImg, smallImg);
 
-		cascadeClassifier.detectMultiScale(smallImg, faces, 1.1, 2,
+		cascadeClassifier.detectMultiScale(image, faces, 1.1, 2,
 			0
 			//|CV_HAAR_FIND_BIGGEST_OBJECT
 			//|CV_HAAR_DO_ROUGH_SEARCH
@@ -224,7 +242,7 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 		for (int i = 0; i < faceCount; ++i)
 		{
 			cv::Rect &rect = faces[i];
-			if (!IsShapeInRect(groundTruthShape, rect, scale))
+			if (!IsShapeInRect(groundTruthShape, rect))
 				continue;
 
 			vecData.push_back(FDTrainDataItem());
@@ -238,10 +256,10 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 			// 属于数据预处理，和算法本身关系不大
 			// 实际上是替代人工工作？
 
-			boundingbox.m_x = rect.x*scale;
-			boundingbox.m_y = rect.y*scale;
-			boundingbox.m_width = (rect.width - 1)*scale;
-			boundingbox.m_height = (rect.height - 1)*scale;
+			boundingbox.m_x = rect.x;
+			boundingbox.m_y = rect.y;
+			boundingbox.m_width = (rect.width - 1);
+			boundingbox.m_height = (rect.height - 1);
 			boundingbox.CalcCenter();
 
 
@@ -377,7 +395,7 @@ void FDUtility::AdjustImage(cv::Mat_<uchar> &image, cv::Mat_<double> &ground_tru
 	}
 }
 
-bool FDUtility::IsShapeInRect(const cv::Mat_<double> &shape, const cv::Rect &rect, double scale)
+bool FDUtility::IsShapeInRect(const cv::Mat_<double> &shape, const cv::Rect &rect)
 {
 	double sum1 = 0;
 	double sum2 = 0;
@@ -398,10 +416,10 @@ bool FDUtility::IsShapeInRect(const cv::Mat_<double> &shape, const cv::Rect &rec
 	if ((max_y - min_y)>rect.height*1.5)
 		return false;
 
-	if (abs(sum1 / shape.rows - (rect.x + rect.width / 2.0)*scale) > rect.width*scale / 2.0)
+	if (abs(sum1 / shape.rows - (rect.x + rect.width / 2.0)) > rect.width / 2.0)
 		return false;
 
-	if (abs(sum2 / shape.rows - (rect.y + rect.height / 2.0)*scale) > rect.height*scale / 2.0)
+	if (abs(sum2 / shape.rows - (rect.y + rect.height / 2.0)) > rect.height / 2.0)
 		return false;
 
 	return true;

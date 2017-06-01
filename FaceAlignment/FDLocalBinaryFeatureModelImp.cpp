@@ -18,7 +18,6 @@ void FDLocalBinaryFeatureModelImp::Train(const FDLocalBinaryFeatureModelParam &p
 {
 	ReleaseModel();
 	mVecModels.resize(param.mStageNum);
-	int leafFeatureNum = param.mLandmarkNum * param.mMaxTreeNum * (int)pow(2, (param.mMaxTreeDepth - 1));
 	mVecRandomForest.clear();
 	mVecRandomForest.resize(param.mStageNum);
 	int sampleCount = (int)trainData.mVecDataItems.size();
@@ -34,14 +33,14 @@ void FDLocalBinaryFeatureModelImp::Train(const FDLocalBinaryFeatureModelParam &p
 		currentForest.Train(trainData);
 
 		feature_node **feature = GenerateFeature(currentForest, trainData);
-		GlobalRegression(feature, trainData, mVecModels[i], leafFeatureNum);
+		GlobalRegression(feature, trainData, mVecModels[i], currentForest.mLeafNodeNum);
 		ReleaseFeature(feature, sampleCount);
 	}
 
 	mPredictData.mMeanShape = trainData.mMeanShape.clone();
 }
 
-bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result)
+bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox /*=NULL*/)
 {
 	uint64 t1 = FDUtility::GetCurrentTime();
 	// todo multi
@@ -77,6 +76,10 @@ bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, std::ve
 		boundingBox.CalcCenter();
 
 		Predict(image, result[i], boundingBox);
+		if (NULL != pVecBox)
+		{
+			pVecBox->push_back(boundingBox);
+		}
 	}
 	return true;
 }
@@ -157,7 +160,7 @@ void FDLocalBinaryFeatureModelImp::GetCodeFromRandomForest(feature_node *feature
 {
 	const FDBoundingBox &boundingBox = item.mBoundingBox;
 	const cv::Mat_<uchar> image = item.mImage;
-	int leafNodePerTree = (int)pow(2, randomForest.mVecTree[0][0].mMaxDepth - 1);
+	int startIndex = 1;
 	int maxTreeNum = randomForest.mMaxTreeNum;
 	int featurePos = 0;
 	for (int i = 0; i < randomForest.mLandmarkNum; i++)
@@ -169,13 +172,15 @@ void FDLocalBinaryFeatureModelImp::GetCodeFromRandomForest(feature_node *feature
 		for (int j = 0; j < maxTreeNum; j++)
 		{
 			int curNodeId = 0;
-			int code = 1;
 			const FDRandomTree &tree = vecCurLandmardTree[j];
 			const std::vector<FDNode> &vecNode = tree.mVecNodes;
 			// depth is start from 1
 			for (int k = 0; k < tree.mMaxDepth - 1; k++)
 			{
 				const FDNode &curNode = vecNode[curNodeId];
+				if (curNode.mLeafNodeId >= 0)
+					break;
+
 				double x1 = curNode.mFeature[0];
 				double y1 = curNode.mFeature[1];
 				double x2 = curNode.mFeature[2];
@@ -207,14 +212,13 @@ void FDLocalBinaryFeatureModelImp::GetCodeFromRandomForest(feature_node *feature
 				else
 				{
 					curNodeId = curNode.mChildrenNodesId[1];
-					int move = tree.mMaxDepth - 2 - k;
-					code += (1 << move);
 				}
 			}
 		
-			feature[featurePos].index = leafNodePerTree*featurePos + code;
+			feature[featurePos].index = startIndex + vecNode[curNodeId].mLeafNodeId;
 			feature[featurePos].value = 1;
 			featurePos++;
+			startIndex += tree.mLeafNodeNum;
 		}
 	}
 }

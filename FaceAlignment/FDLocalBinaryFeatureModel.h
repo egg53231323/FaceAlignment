@@ -33,7 +33,7 @@ public:
 
 	void SetCascadeClassifierModelPath(const char *path);
 	void Train(const FDLocalBinaryFeatureModelParam &param, FDTrainData &trainData);
-	bool Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result);
+	bool Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox = NULL);
 
 	bool Save(const char *path);
 	bool Load(const char *path);
