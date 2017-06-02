@@ -93,6 +93,16 @@ bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, cv::Mat
 		GlobalPrediction(feature, mVecModels[i], item.mCurrentShape, item.mBoundingBox);
 		ReleaseFeature(feature, 1);
 	}
+
+	// 
+	for (int i = 0; i < stageNum; i++)
+	{
+		// todo memory 
+		feature_node **feature = GenerateFeature(mVecRandomForest[i], mPredictData);
+		GlobalPrediction(feature, mVecModels[i], item.mCurrentShape, item.mBoundingBox);
+		ReleaseFeature(feature, 1);
+	}
+
 	result = item.mCurrentShape;
 	mPredictData.mVecDataItems.clear();
 

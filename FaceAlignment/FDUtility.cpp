@@ -43,7 +43,7 @@ const std::vector<int>& FDUtility::GetLandmarkFlag()
 		// 49 - 68 ×ì°Í
 		for (int i = 0; i < 17; i++)
 		{
-			s_vecLandmarkFlag[i] = 0;
+			//s_vecLandmarkFlag[i] = 0;
 		}
 	}
 	return s_vecLandmarkFlag;
@@ -207,8 +207,9 @@ void FDUtility::OutputItemInfo(FDTrainDataItem &item, const char *path)
 	cv::imwrite(path, dst);
 }
 
-void FDUtility::DrawShape(cv::Mat_<double> &shape, cv::Mat &img, unsigned char val, int radius /*= 3*/)
+void FDUtility::DrawShape(cv::Mat_<double> &shape, cv::Mat &img, unsigned char val)
 {
+	int radius = img.cols / 1000 + 2;
 	for (int i = 0; i < shape.rows; i++)
 	{
 		cv::circle(img, cv::Point2d(shape(i, 0), shape(i, 1)), radius, cv::Scalar(0, 0, val), -1, 8, 0);

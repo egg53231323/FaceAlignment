@@ -61,7 +61,7 @@ public:
 	static void CalcMeanShape(FDTrainData &trainData);
 
 	static void OutputItemInfo(FDTrainDataItem &item, const char *path);
-	static void DrawShape(cv::Mat_<double> &shape, cv::Mat &img, unsigned char val, int radius = 3);
+	static void DrawShape(cv::Mat_<double> &shape, cv::Mat &img, unsigned char val);
 
 	static void ShowImage(const char *windowName, const char *path);
 	static void Log(const char *fmt, ...);

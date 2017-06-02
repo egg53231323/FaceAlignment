@@ -18,7 +18,7 @@ FDLocalBinaryFeatureModelParam::FDLocalBinaryFeatureModelParam()
 	}
 	mShapeGenerateNumPerSample = 5;
 	mSampleOverlapRate = 0.3;
-	mMaxTreeNum = 10;
+	mMaxTreeNum = 15;
 	mMaxTreeDepth = 5;
 	mStageNum = 7;
 

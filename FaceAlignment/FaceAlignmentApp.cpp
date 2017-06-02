@@ -19,6 +19,8 @@ void TrainModel()
 	//vecPath.push_back(strDir + "list_afw.txt");
 	vecPath.push_back(strDir + "list_helen.txt");
 	//vecPath.push_back(strDir + "list_lfpw.txt");
+	vecPath.push_back(strDir + "list_300windoor.txt");
+	vecPath.push_back(strDir + "list_300woutdoor.txt");
 
 	std::vector<std::string> vecImgPath;
 	FDUtility::GenerateTrainData(vecPath, cascadeClassifierModelPath, param.mShapeGenerateNumPerSample, trainData, &vecImgPath);
@@ -41,8 +43,11 @@ void TestModel()
 {
 	std::string strDir = FD_TEMP_DIR;
 	std::vector<std::string> vecPath;
-	vecPath.push_back(strDir + "list_helen_test.txt");
+	//vecPath.push_back(strDir + "list_helen_test.txt");
+	//vecPath.push_back(strDir + "list_afw_test.txt");
 	vecPath.push_back(strDir + "list_lfpw_test.txt");
+	vecPath.push_back(strDir + "list_300windoor.txt");
+	vecPath.push_back(strDir + "list_300woutdoor.txt");
 
 	std::string tempPath;
 	std::vector<std::string> vecImgPath;
@@ -149,7 +154,7 @@ void TestWithCamera()
 		}
 
 		cv::imshow("result", frame);
-		char ch = cv::waitKey(10);
+		char ch = cv::waitKey(5);
 		if (ch == 's' && !result.empty())
 		{
 			cv::imwrite(strPath, saveFrame);
@@ -161,7 +166,7 @@ void TestWithCamera()
 
 int main()
 {
-	int type = 0;
+	int type = 2;
 	switch (type)
 	{
 	case 0:
