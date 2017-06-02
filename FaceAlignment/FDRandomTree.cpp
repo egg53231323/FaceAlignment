@@ -76,6 +76,27 @@ void FDRandomTree::SetParam(int maxDepth, int featureGenerateCount, double featu
 	mLandmarkID = landmarkID;
 
 	mVecNodes.resize(mMaxNodesNum);
+
+	cv::RNG randomNumGenerator(FDUtility::GetUInt64Value());
+	cv::Mat_<double> randomPointPairs(mFeatureGenerateCount, 4);
+	for (int i = 0; i < mFeatureGenerateCount; i++)
+	{
+		double x1 = randomNumGenerator.uniform(-1.0, 1.0);
+		double y1 = randomNumGenerator.uniform(-1.0, 1.0);
+		double x2 = randomNumGenerator.uniform(-1.0, 1.0);
+		double y2 = randomNumGenerator.uniform(-1.0, 1.0);
+		if ((x1*x1 + y1*y1 > 1.0) || (x2*x2 + y2*y2 > 1.0))
+		{
+			i--;
+			continue;
+		}
+
+		randomPointPairs(i, 0) = x1 * mFeatureGenerateRadius;
+		randomPointPairs(i, 1) = y1 * mFeatureGenerateRadius;
+		randomPointPairs(i, 2) = x2 * mFeatureGenerateRadius;
+		randomPointPairs(i, 3) = y2 * mFeatureGenerateRadius;
+	}
+	mRandomPointPairs = randomPointPairs;
 }
 
 void FDRandomTree::Train(const FDTrainData &trainData, const std::vector<int> vecSampleIndex)
@@ -170,25 +191,7 @@ void FDRandomTree::SplitNode(const FDTrainData &trainData, const std::vector<int
 	}
 
 	cv::RNG randomNumGenerator(FDUtility::GetUInt64Value());
-	cv::Mat_<double> randomPointPairs(mFeatureGenerateCount, 4);
-	for (int i = 0; i < mFeatureGenerateCount; i++)
-	{
-		double x1 = randomNumGenerator.uniform(-1.0, 1.0);
-		double y1 = randomNumGenerator.uniform(-1.0, 1.0);
-		double x2 = randomNumGenerator.uniform(-1.0, 1.0);
-		double y2 = randomNumGenerator.uniform(-1.0, 1.0);
-		if ((x1*x1 + y1*y1 > 1.0) || (x2*x2 + y2*y2 > 1.0))
-		{
-			i--;
-			continue;
-		}
-
-		randomPointPairs(i, 0) = x1 * mFeatureGenerateRadius;
-		randomPointPairs(i, 1) = y1 * mFeatureGenerateRadius;
-		randomPointPairs(i, 2) = x2 * mFeatureGenerateRadius;
-		randomPointPairs(i, 3) = y2 * mFeatureGenerateRadius;
-	}
-
+	cv::Mat_<double> &randomPointPairs = mRandomPointPairs;
 	int sampleCount = (int)vecSampleIndex.size();
 	cv::Mat_<int> densities(mFeatureGenerateCount, sampleCount);
 	for (int i = 0; i < sampleCount; i++)
@@ -235,11 +238,13 @@ void FDRandomTree::SplitNode(const FDTrainData &trainData, const std::vector<int
 	rc1.reserve(sampleCount);
 	rc2.reserve(sampleCount);
 
-	double varOverall = (CalcVar(shapeResidual.col(0)) + CalcVar(shapeResidual.col(1))) * sampleCount;
+#define VarianceFactor(x) (x)
+
+	double varOverall = (CalcVariance(shapeResidual.col(0)) + CalcVariance(shapeResidual.col(1))) * VarianceFactor(sampleCount);
 	double varLeft = 0;
 	double varRight = 0;
 	double varReduce = 0;
-	double maxVarReduce = 0;
+	double maxVarReduce = std::numeric_limits<double>::min();
 	double tempThreshold = 0;
 	int maxVarReduceId = -1;
 	for (int i = 0; i < mFeatureGenerateCount; i++)
@@ -268,10 +273,10 @@ void FDRandomTree::SplitNode(const FDTrainData &trainData, const std::vector<int
 		if (lc1.empty() || rc1.empty())
 			continue;
 
-		varLeft = (CalcVar(lc1) + CalcVar(lc2)) * lc1.size();
-		varRight = (CalcVar(rc1) + CalcVar(rc2)) * rc1.size();
+		varLeft = (CalcVariance(lc1) + CalcVariance(lc2)) * VarianceFactor(lc1.size());
+		varRight = (CalcVariance(rc1) + CalcVariance(rc2)) * VarianceFactor(rc1.size());
 		varReduce = varOverall - varLeft - varRight;
-		if (varReduce > 0 && varReduce > maxVarReduce)
+		if (varReduce > maxVarReduce)
 		{
 			maxVarReduce = varReduce;
 			threshold = tempThreshold;
@@ -329,19 +334,19 @@ void FDRandomTree::Write(std::ofstream& fs)
 	}
 }
 
-double FDRandomTree::CalcVar(const std::vector<double>& v)
+double FDRandomTree::CalcVariance(const std::vector<double>& v)
 {
 	if (v.empty())
 		return 0;
 
 	cv::Mat_<double> mat(v);
-	return CalcVar(mat);
+	return CalcVariance(mat);
 }
-double FDRandomTree::CalcVar(const cv::Mat_<double>& mat)
+double FDRandomTree::CalcVariance(const cv::Mat_<double>& mat)
 {
-	double mean_1 = cv::mean(mat)[0];
-	double mean_2 = cv::mean(mat.mul(mat))[0];
-	return mean_2 - mean_1*mean_1;
+	cv::Mat mean, stddev;
+	cv::meanStdDev(mat, mean, stddev);
+	return stddev.at<double>(0, 0) * stddev.at<double>(0, 0);
 }
 
 

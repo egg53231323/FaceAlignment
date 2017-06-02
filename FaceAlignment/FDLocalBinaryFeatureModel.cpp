@@ -6,8 +6,17 @@
 
 FDLocalBinaryFeatureModelParam::FDLocalBinaryFeatureModelParam()
 {
-	mLandmarkNum = 68;
-	mShapeGenerateNumPerSample = 1;
+	mLandmarkNum = 0;
+	const std::vector<int> &landmarkFlag = FDUtility::GetLandmarkFlag();
+	int landmarkCount = (int)landmarkFlag.size();
+	for (int i = 0; i < landmarkCount; i++)
+	{
+		if (landmarkFlag[i] != 0)
+		{
+			mLandmarkNum++;
+		}
+	}
+	mShapeGenerateNumPerSample = 5;
 	mSampleOverlapRate = 0.3;
 	mMaxTreeNum = 10;
 	mMaxTreeDepth = 5;
@@ -16,7 +25,8 @@ FDLocalBinaryFeatureModelParam::FDLocalBinaryFeatureModelParam()
 	//int count[Stage_Array_Size] = { 500, 500, 500, 300, 300, 200, 200,200,100, 100 };
 	int count[Stage_Array_Size] = { 500, 500, 500, 500, 500, 500, 500, 500, 500, 500 };
 	//double radius[Stage_Array_Size] = { 0.4, 0.3, 0.2, 0.15, 0.12, 0.10, 0.08, 0.06, 0.06, 0.05 };
-	double radius[Stage_Array_Size] = { 0.29, 0.21, 0.16, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02, 0.01 };
+	//double radius[Stage_Array_Size] = { 0.29, 0.21, 0.16, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02, 0.01 };
+	double radius[Stage_Array_Size] = { 0.3, 0.25, 0.20, 0.15, 0.10, 0.08, 0.06, 0.04, 0.02, 0.01 };
 	memcpy(mFeatureGenerateCount, count, sizeof(int)*Stage_Array_Size);
 	memcpy(mFeatureGenerateRadius, radius, sizeof(double)*Stage_Array_Size);
 }

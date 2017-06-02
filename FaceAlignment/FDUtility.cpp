@@ -3,6 +3,7 @@
 #include "FDCVInclude.h"
 #include <fstream>
 #include <stdarg.h>
+#include "FDFaceDetector.h"
 
 //#define SAVE_TRAIN_DATA_TO_FILE 
 //#define ENABLE_LIMIT_TRAIN_DATA_SIZE
@@ -22,6 +23,30 @@ uint64 FDUtility::GetUInt64Value()
 uint64 FDUtility::GetCurrentTime()
 {
 	return (uint64)((double)cv::getTickCount() / (cv::getTickFrequency() / 1000.0));
+}
+
+const std::vector<int>& FDUtility::GetLandmarkFlag()
+{
+	static std::vector<int> s_vecLandmarkFlag;
+	if (s_vecLandmarkFlag.empty())
+	{
+		int maxSize = 68;
+		s_vecLandmarkFlag.resize(maxSize, 0);
+		for (int i = 0; i < maxSize; i++)
+		{
+			s_vecLandmarkFlag[i] = 1;
+		}
+		// 1 - 17 轮廓
+		// 18 - 27 眉毛
+		// 28 - 36 鼻子
+		// 37 - 48 眼睛
+		// 49 - 68 嘴巴
+		for (int i = 0; i < 17; i++)
+		{
+			s_vecLandmarkFlag[i] = 0;
+		}
+	}
+	return s_vecLandmarkFlag;
 }
 
 void FDUtility::SimilarityTransform(const cv::Mat_<double> &shape1, const cv::Mat_<double> &shape2, cv::Mat_<double> &rotation, double &scale)
@@ -154,15 +179,17 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 		}
 	}
 
-
 	CalcMeanShape(trainData);
-	std::vector<FDTrainDataItem> &vecItem = trainData.mVecDataItems;
-	int count = (int)vecItem.size();
-	for (int i = 0; i < count; i++)
+	if (shapeGenerateNumPerSample <= 1)
 	{
-		FDTrainDataItem &item = vecItem[i];
-		item.mCurrentShape = RelativeToReal(trainData.mMeanShape, item.mBoundingBox);
-}
+		std::vector<FDTrainDataItem> &vecItem = trainData.mVecDataItems;
+		int count = (int)vecItem.size();
+		for (int i = 0; i < count; i++)
+		{
+			FDTrainDataItem &item = vecItem[i];
+			item.mCurrentShape = RelativeToReal(trainData.mMeanShape, item.mBoundingBox);
+		}
+	}
 
 #ifdef SAVE_TRAIN_DATA_TO_FILE
 	FDTrainDataItem it = trainData.mVecDataItems[0];
@@ -194,11 +221,12 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 	std::ifstream fin;
 	fin.open(fileListPath);
 
-	cv::CascadeClassifier cascadeClassifier;
+	FDFaceDetector faceDetector;
+	faceDetector.SetCascadeClassifierModelPath(cascadeClassifierModelPath.c_str());
+
 	std::vector<cv::Rect> faces;
 	cv::Mat gray;
 
-	cascadeClassifier.load(cascadeClassifierModelPath);
 	std::string tempPath;
 	std::string ptsPath;
 	int n = 0;
@@ -225,45 +253,24 @@ bool FDUtility::LoadTrainData(const std::string &fileListPath, const std::string
 
 		ptsPath = imgPath;
 		ptsPath.replace(ptsPath.find_last_of("."), 4, ".pts");
-		cv::Mat_<double> groundTruthShape = LoadGroundTruthShape(ptsPath);
+		cv::Mat_<double> groundTruthShape, allShape;
+		LoadGroundTruthShape(ptsPath, groundTruthShape, allShape);
 
-		//cv::Mat smallImg(cvRound(image.rows / scale), cvRound(image.cols / scale), CV_8UC1);
-		//cv::resize(image, smallImg, smallImg.size(), 0, 0, cv::INTER_LINEAR);
-		//cv::equalizeHist(smallImg, smallImg);
+		faceDetector.FaceDetect(image, faces, FD_FACE_DETECTOR_TYPE);
 
-		cascadeClassifier.detectMultiScale(image, faces, 1.1, 2,
-			0
-			//|CV_HAAR_FIND_BIGGEST_OBJECT
-			//|CV_HAAR_DO_ROUGH_SEARCH
-			| CV_HAAR_SCALE_IMAGE
-			,
-			cv::Size(30, 30));
 		int faceCount = (int)faces.size();
 		for (int i = 0; i < faceCount; ++i)
 		{
 			cv::Rect &rect = faces[i];
-			if (!IsShapeInRect(groundTruthShape, rect))
+			if (!IsShapeInRect(allShape, rect))
 				continue;
 
 			vecData.push_back(FDTrainDataItem());
 			FDTrainDataItem &item = vecData.back();
 			FDBoundingBox &boundingbox = item.mBoundingBox;
+			RectToBoundingBox(rect, boundingbox);
 
-			// 训练数据的face可能处于图像的任何地方，并且有其他对象
-			// 后续训练算法alignment需要近似只有face的局部图像，而不是全局图像
-			// 这里应该是用cv训练好的级联分类器自动检测人脸，得到人脸外接矩形
-			// 然后调整数据集中给定的坐标，到人脸的局部坐标，作为训练数据
-			// 属于数据预处理，和算法本身关系不大
-			// 实际上是替代人工工作？
-
-			boundingbox.m_x = rect.x;
-			boundingbox.m_y = rect.y;
-			boundingbox.m_width = (rect.width - 1);
-			boundingbox.m_height = (rect.height - 1);
-			boundingbox.CalcCenter();
-
-
-			AdjustImage(image, groundTruthShape, boundingbox);
+			//AdjustImage(image, groundTruthShape, boundingbox);
 			item.mImage = image;
 			item.mGroundTruthShape = groundTruthShape;
 
@@ -357,10 +364,11 @@ std::string FDUtility::Replace(const std::string &str, const std::string &strSrc
 	return strRes;
 }
 
-cv::Mat_<double> FDUtility::LoadGroundTruthShape(const std::string &filePath)
+void FDUtility::LoadGroundTruthShape(const std::string &filePath, cv::Mat_<double> &enableShape, cv::Mat_<double> &allShape)
 {
-	int landmarkCount = 68;
-	cv::Mat_<double> shape(landmarkCount, 2);
+	const std::vector<int> &landmarkFlag = GetLandmarkFlag();
+	int landmarkCount = (int)landmarkFlag.size();
+	allShape = cv::Mat_<double>(landmarkCount, 2);
 	std::ifstream fin;
 	std::string temp;
 
@@ -368,12 +376,29 @@ cv::Mat_<double> FDUtility::LoadGroundTruthShape(const std::string &filePath)
 	getline(fin, temp);
 	getline(fin, temp);
 	getline(fin, temp);
+
+	int enableCount = 0;
 	for (int i = 0; i < landmarkCount; i++)
 	{
-		fin >> shape(i, 0) >> shape(i, 1);
+		fin >> allShape(i, 0) >> allShape(i, 1);
+		if (landmarkFlag[i] != 0)
+		{
+			enableCount++;
+		}
 	}
 	fin.close();
-	return shape;
+
+	enableShape = cv::Mat_<double>(enableCount, 2);
+	int idx = 0;
+	for (int i = 0; i < landmarkCount; i++)
+	{
+		if (landmarkFlag[i] != 0)
+		{
+			enableShape(idx, 0) = allShape(i, 0);
+			enableShape(idx, 1) = allShape(i, 1);
+			idx++;
+		}
+	}
 }
 
 void FDUtility::AdjustImage(cv::Mat_<uchar> &image, cv::Mat_<double> &ground_truth_shape, FDBoundingBox &boundingBox)
@@ -473,5 +498,13 @@ cv::Rect FDUtility::ScaleRect(const cv::Rect &rect, double scale)
 	return cv::Rect((int)(rect.x * scale), (int)(rect.y * scale), (int)(rect.width * scale), (int)(rect.height * scale));
 }
 
+void FDUtility::RectToBoundingBox(const cv::Rect &rect, FDBoundingBox &box)
+{
+	box.m_x = rect.x;
+	box.m_y = rect.y;
+	box.m_width = rect.width;
+	box.m_height = rect.height;
+	box.CalcCenter();
+}
 
 

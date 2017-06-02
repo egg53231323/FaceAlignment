@@ -158,10 +158,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FDCVInclude.h" />
+    <ClInclude Include="FDFaceDetector.h" />
     <ClInclude Include="FDLocalBinaryFeatureModel.h" />
     <ClInclude Include="FDLocalBinaryFeatureModelImp.h" />
     <ClInclude Include="FDRandomForest.h" />
     <ClInclude Include="FDRandomTree.h" />
+    <ClInclude Include="libfacedetection\facedetect-dll.h" />
     <ClInclude Include="liblinear\blas.h" />
     <ClInclude Include="liblinear\blasp.h" />
     <ClInclude Include="liblinear\linear.h" />
@@ -172,6 +174,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FaceAlignmentApp.cpp" />
+    <ClCompile Include="FDFaceDetector.cpp" />
     <ClCompile Include="FDLocalBinaryFeatureModel.cpp" />
     <ClCompile Include="FDLocalBinaryFeatureModelImp.cpp" />
     <ClCompile Include="FDRandomForest.cpp" />

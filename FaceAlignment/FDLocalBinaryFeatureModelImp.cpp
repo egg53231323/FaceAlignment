@@ -4,6 +4,11 @@
 #include "FDUtility.h"
 #include "liblinear/linear.h"
 
+FDLocalBinaryFeatureModelImp::FDLocalBinaryFeatureModelImp(): mFaceDetectorType(0)
+{
+
+}
+
 FDLocalBinaryFeatureModelImp::~FDLocalBinaryFeatureModelImp()
 {
 	ReleaseModel();
@@ -11,11 +16,12 @@ FDLocalBinaryFeatureModelImp::~FDLocalBinaryFeatureModelImp()
 
 void FDLocalBinaryFeatureModelImp::SetCascadeClassifierModelPath(const char *path)
 {
-	mCascadeClassifier.load(path);
+	mFaceDetector.SetCascadeClassifierModelPath(path);
 }
 
 void FDLocalBinaryFeatureModelImp::Train(const FDLocalBinaryFeatureModelParam &param, FDTrainData &trainData)
 {
+	mFaceDetectorType = FD_FACE_DETECTOR_TYPE;
 	ReleaseModel();
 	mVecModels.resize(param.mStageNum);
 	mVecRandomForest.clear();
@@ -43,20 +49,9 @@ void FDLocalBinaryFeatureModelImp::Train(const FDLocalBinaryFeatureModelParam &p
 bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox /*=NULL*/)
 {
 	uint64 t1 = FDUtility::GetCurrentTime();
-	// todo multi
-	double scale = 1.3;
-	std::vector<cv::Rect> faces;
-	cv::Mat smallImg(cvRound(image.rows / scale), cvRound(image.cols / scale), CV_8UC1);
-	cv::resize(image, smallImg, smallImg.size(), 0, 0, cv::INTER_LINEAR);
-	cv::equalizeHist(smallImg, smallImg);
 
-	mCascadeClassifier.detectMultiScale(smallImg, faces, 1.1, 2,
-		0
-		//|CV_HAAR_FIND_BIGGEST_OBJECT
-		//|CV_HAAR_DO_ROUGH_SEARCH
-		| CV_HAAR_SCALE_IMAGE
-		,
-		cv::Size(30, 30));
+	std::vector<cv::Rect> faces;
+	mFaceDetector.FaceDetect(image, faces, mFaceDetectorType);
 
 	uint64 t2 = FDUtility::GetCurrentTime();
 	FDLog("cost detect %d", (int)(t2 - t1));
@@ -69,11 +64,7 @@ bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, std::ve
 	result.resize(faceCount);
 	for (int i = 0; i < faceCount; i++)
 	{
-		boundingBox.m_x = faces[i].x*scale;
-		boundingBox.m_y = faces[i].y*scale;
-		boundingBox.m_width = (faces[i].width - 1) * scale;
-		boundingBox.m_height = (faces[i].height - 1) * scale;
-		boundingBox.CalcCenter();
+		FDUtility::RectToBoundingBox(faces[i], boundingBox);
 
 		Predict(image, result[i], boundingBox);
 		if (NULL != pVecBox)
@@ -380,7 +371,7 @@ bool FDLocalBinaryFeatureModelImp::Save(const char *path)
 	WriteRandomForest(fs);
 	WriteRegression(fs);
 	WriteMeanShape(fs);
-	fs.close();
+	fs.write((const char *)&mFaceDetectorType, sizeof(int));
 	return true;
 }
 
@@ -390,7 +381,9 @@ bool FDLocalBinaryFeatureModelImp::Load(const char *path)
 	ReadRandomForest(fs);
 	ReadRegression(fs);
 	ReadMeanShape(fs);
+	fs.read((char *)&mFaceDetectorType, sizeof(int));
 	fs.close();
+	std::cout << "face detector type: " << mFaceDetectorType << std::endl;
 	return (!mVecRandomForest.empty()) && (!mVecModels.empty());
 }
 

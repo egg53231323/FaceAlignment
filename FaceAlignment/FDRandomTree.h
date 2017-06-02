@@ -46,6 +46,8 @@ protected:
 	double mFeatureGenerateRadius;
 	// sample ovarlap rate
 	double mSampleOverlapRate;
+
+	cv::Mat_<double> mRandomPointPairs;
 	//////////////////////////////////////
 
 public:
@@ -61,8 +63,8 @@ protected:
 	void SplitNode(const FDTrainData &trainData, const std::vector<int> &vecSampleIndex, cv::Mat_<double> &shapeResidual,
 		double& threshold, double* nodeFeature, std::vector<int>& leftSampleIndex, std::vector<int>& rightSampleIndex);
 
-	double CalcVar(const std::vector<double> &v);
-	double CalcVar(const cv::Mat_<double> &mat);
+	double CalcVariance(const std::vector<double> &v);
+	double CalcVariance(const cv::Mat_<double> &mat);
 };
 
 

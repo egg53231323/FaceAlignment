@@ -161,7 +161,7 @@ void TestWithCamera()
 
 int main()
 {
-	int type =2;
+	int type = 0;
 	switch (type)
 	{
 	case 0:

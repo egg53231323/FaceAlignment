@@ -19,6 +19,9 @@
     <Filter Include="源文件\liblinear">
       <UniqueIdentifier>{73644cf8-93b9-4db1-b672-34fd1bdc9d90}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\libfacedetection">
+      <UniqueIdentifier>{cd90a666-f0c5-4530-aedd-510c8d5c4428}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -60,6 +63,12 @@
     <ClInclude Include="liblinear\tron.h">
       <Filter>头文件\liblinear</Filter>
     </ClInclude>
+    <ClInclude Include="libfacedetection\facedetect-dll.h">
+      <Filter>头文件\libfacedetection</Filter>
+    </ClInclude>
+    <ClInclude Include="FDFaceDetector.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -99,6 +108,9 @@
       <Filter>源文件\liblinear</Filter>
     </ClCompile>
     <ClCompile Include="FaceAlignmentApp.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="FDFaceDetector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

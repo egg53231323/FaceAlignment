@@ -5,6 +5,7 @@
 #include <fstream>
 #include "FDRandomForest.h"
 #include "FDUtility.h"
+#include "FDFaceDetector.h"
 
 struct feature_node;
 struct model;
@@ -15,9 +16,11 @@ protected:
 	std::vector<FDRandomForest> mVecRandomForest;
 	std::vector<std::vector<struct model*> > mVecModels;
 	FDTrainData mPredictData;
-	cv::CascadeClassifier mCascadeClassifier;
+	FDFaceDetector mFaceDetector;
+	int mFaceDetectorType;
 
 public:
+	FDLocalBinaryFeatureModelImp();
 	virtual ~FDLocalBinaryFeatureModelImp();
 	void SetCascadeClassifierModelPath(const char *path);
 	void Train(const FDLocalBinaryFeatureModelParam &param, FDTrainData &trainData);

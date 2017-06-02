@@ -8,6 +8,9 @@
 
 #define FD_TEMP_DIR "E:/work/test/FaceAlignment/test/"
 
+// 0: opencv,  1: libfacedetection
+#define FD_FACE_DETECTOR_TYPE 1
+
 class FDBoundingBox
 {
 public:
@@ -45,6 +48,9 @@ class FDUtility
 public:
 	static uint64 GetUInt64Value();
 	static uint64 GetCurrentTime();
+
+	static const std::vector<int>& GetLandmarkFlag();
+
 	static void SimilarityTransform(const cv::Mat_<double> &shape1, const cv::Mat_<double> &shape2, cv::Mat_<double> &rotation, double &scale);
 	static cv::Mat_<double> RealToRelative(const cv::Mat_<double> &shape, const FDBoundingBox &boundingBox);
 	static cv::Mat_<double> RelativeToReal(const cv::Mat_<double> &shape, const FDBoundingBox &boundingBox);
@@ -63,12 +69,13 @@ public:
 	static std::string Replace(const std::string &str, const std::string &strSrc, const std::string &strDst);
 	static bool LoadTrainData(const std::string &fileListPath, const std::string &cascadeClassifierModelPath, 
 		std::vector<FDTrainDataItem> &vecData, std::vector<std::string> *pVecPath);
-	static cv::Mat_<double> LoadGroundTruthShape(const std::string &filePath);
+	static void LoadGroundTruthShape(const std::string &filePath, cv::Mat_<double> &enableShape, cv::Mat_<double> &allShape);
 	static void AdjustImage(cv::Mat_<uchar> &image, cv::Mat_<double> &ground_truth_shape, FDBoundingBox &boundingBox);
 	static bool IsShapeInRect(const cv::Mat_<double> &shape, const cv::Rect &rect);
 	static bool GetShapeBoundingBox(const cv::Mat_<double> &shape, FDBoundingBox &boundingBox);
 	static bool IsBoundingBoxInRect(const FDBoundingBox &boundingBox, const cv::Rect &rect);
 	static cv::Rect ScaleRect(const cv::Rect &rect, double scale);
+	static void RectToBoundingBox(const cv::Rect &rect, FDBoundingBox &box);
 };
 
 #endif // UTILITY_H
