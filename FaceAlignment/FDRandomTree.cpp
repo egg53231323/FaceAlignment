@@ -90,6 +90,18 @@ void FDRandomTree::SetParam(int maxDepth, int featureGenerateCount, double featu
 			i--;
 			continue;
 		}
+		if (landmarkID < 8 && x1 < 0 && x2 < 0)
+		{
+			FDLog("skip");
+			i--;
+			continue;
+		}
+		else if (landmarkID > 8 && landmarkID < 17 && x1 > 0 && x2 > 0)
+		{
+			FDLog("skip");
+			i--;
+			continue;
+		}
 
 		randomPointPairs(i, 0) = x1 * mFeatureGenerateRadius;
 		randomPointPairs(i, 1) = y1 * mFeatureGenerateRadius;
