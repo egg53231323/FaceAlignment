@@ -43,6 +43,8 @@ const std::vector<int>& FDUtility::GetLandmarkFlag()
 		// 49 - 68 ×ì°Í
 		for (int i = 0; i < 17; i++)
 		{
+			if (i == 0 || i == 8 || i == 16)
+				continue;
 			//s_vecLandmarkFlag[i] = 0;
 		}
 	}
@@ -204,6 +206,7 @@ void FDUtility::OutputItemInfo(FDTrainDataItem &item, const char *path)
 	cv::cvtColor(item.mImage, dst, cv::COLOR_GRAY2BGR);
 	DrawShape(item.mGroundTruthShape, dst, 0);
 	DrawShape(item.mCurrentShape, dst, 255);
+	cv::rectangle(dst, cv::Rect(item.mBoundingBox.m_x, item.mBoundingBox.m_y, item.mBoundingBox.m_width, item.mBoundingBox.m_width), cv::Scalar(255, 0, 0), 2);
 	cv::imwrite(path, dst);
 }
 

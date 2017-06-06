@@ -18,7 +18,9 @@ void TrainModel()
 	std::vector<std::string> vecPath;
 	//vecPath.push_back(strDir + "list_afw.txt");
 	vecPath.push_back(strDir + "list_helen.txt");
+	//vecPath.push_back(strDir + "list_helen_test.txt");
 	//vecPath.push_back(strDir + "list_lfpw.txt");
+	//vecPath.push_back(strDir + "list_lfpw_test.txt");
 	//vecPath.push_back(strDir + "list_ibug.txt");
 	//vecPath.push_back(strDir + "list_300windoor.txt");
 	//vecPath.push_back(strDir + "list_300woutdoor.txt");
@@ -45,11 +47,11 @@ void TestModel()
 	std::string strDir = FD_TEMP_DIR;
 	std::vector<std::string> vecPath;
 	//vecPath.push_back(strDir + "list_helen_test.txt");
-	//vecPath.push_back(strDir + "list_afw.txt");
+	vecPath.push_back(strDir + "list_afw.txt");
 	vecPath.push_back(strDir + "list_ibug.txt");
 	vecPath.push_back(strDir + "list_lfpw_test.txt");
-	//vecPath.push_back(strDir + "list_300windoor.txt");
-	//vecPath.push_back(strDir + "list_300woutdoor.txt");
+	vecPath.push_back(strDir + "list_300windoor.txt");
+	vecPath.push_back(strDir + "list_300woutdoor.txt");
 
 	std::string tempPath;
 	std::vector<std::string> vecImgPath;
@@ -131,8 +133,8 @@ void TestWithCamera()
 		FDLog("camera open failed!");
 		return;
 	}
-	videoCapture.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-	videoCapture.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+	videoCapture.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+	videoCapture.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
 	cv::Mat frame;
 	cv::Mat saveFrame;
 	cv::Mat gray;
@@ -140,6 +142,8 @@ void TestWithCamera()
 	{
 		videoCapture >> frame;
 		cv::flip(frame, frame, 1);
+		cv::Mat dst(frame.rows, frame.cols, frame.type());
+		//cv::resize(frame, dst, cv::Size(frame.cols / 4, frame.rows / 4));
 		saveFrame = frame.clone();
 		cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
 		std::vector<cv::Mat_<double> > result;
@@ -149,7 +153,7 @@ void TestWithCamera()
 			int count = (int)result.size();
 			for (int j = 0; j < count; j++)
 			{
-				FDUtility::DrawShape(result[j], frame, 255);
+				FDUtility::DrawShape(cv::Mat_<double>(result[j]), frame, 255);
 				cv::rectangle(frame, cv::Rect(vecBox[j].m_x, vecBox[j].m_y, vecBox[j].m_width, vecBox[j].m_height), cv::Scalar(255, 0, 0));
 				//cv::rectangle(frame, cv::Rect(vecBox[j].m_x-100, vecBox[j].m_y-100, vecBox[j].m_width+200, vecBox[j].m_height+200), cv::Scalar(0, 255, 0));
 			}

@@ -95,6 +95,7 @@ bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, cv::Mat
 	}
 
 	// 
+	/*
 	for (int i = 0; i < stageNum; i++)
 	{
 		// todo memory 
@@ -102,7 +103,7 @@ bool FDLocalBinaryFeatureModelImp::Predict(const cv::Mat_<uchar> &image, cv::Mat
 		GlobalPrediction(feature, mVecModels[i], item.mCurrentShape, item.mBoundingBox);
 		ReleaseFeature(feature, 1);
 	}
-
+	*/
 	result = item.mCurrentShape;
 	mPredictData.mVecDataItems.clear();
 

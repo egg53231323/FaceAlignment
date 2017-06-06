@@ -53,7 +53,7 @@ bool FDFaceDetector::FaceDetect(const cv::Mat_<uchar> &image, std::vector<cv::Re
 	else
 	{
 		int dolandmark = 0;
-		int * pResults = facedetect_frontal(mBuffer, (unsigned char*)(image.ptr(0)), image.cols, image.rows, (int)image.step, 1.2f, 2, 48, 0, dolandmark);
+		int * pResults = facedetect_frontal_surveillance(mBuffer, (unsigned char*)(image.ptr(0)), image.cols, image.rows, (int)image.step, 1.2f, 2, 48, 0, dolandmark);
 		int count = (pResults ? *pResults : 0);
 		for (int i = 0; i < count; i++)
 		{
