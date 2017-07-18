@@ -22,6 +22,12 @@
     <Filter Include="头文件\libfacedetection">
       <UniqueIdentifier>{cd90a666-f0c5-4530-aedd-510c8d5c4428}</UniqueIdentifier>
     </Filter>
+    <Filter Include="源文件\RegressionTree">
+      <UniqueIdentifier>{cf6f426a-952a-409d-be76-dd5237468ccc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\RegressionTree">
+      <UniqueIdentifier>{0c6d9faf-3efc-4e80-ba77-63cb5c9e4513}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -69,6 +75,12 @@
     <ClInclude Include="FDFaceDetector.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="FDRegressionTree\FDRegressionTree.h">
+      <Filter>头文件\RegressionTree</Filter>
+    </ClInclude>
+    <ClInclude Include="FDRegressionTree\FDRegressionTreesModel.h">
+      <Filter>头文件\RegressionTree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -112,6 +124,12 @@
     </ClCompile>
     <ClCompile Include="FDFaceDetector.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="FDRegressionTree\FDRegressionTree.cpp">
+      <Filter>源文件\RegressionTree</Filter>
+    </ClCompile>
+    <ClCompile Include="FDRegressionTree\FDRegressionTreesModel.cpp">
+      <Filter>源文件\RegressionTree</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

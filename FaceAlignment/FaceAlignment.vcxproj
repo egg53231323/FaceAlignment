@@ -109,6 +109,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>.;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +145,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>true</OpenMPSupport>
+      <AdditionalIncludeDirectories>.;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,6 +165,8 @@
     <ClInclude Include="FDLocalBinaryFeatureModelImp.h" />
     <ClInclude Include="FDRandomForest.h" />
     <ClInclude Include="FDRandomTree.h" />
+    <ClInclude Include="FDRegressionTree\FDRegressionTree.h" />
+    <ClInclude Include="FDRegressionTree\FDRegressionTreesModel.h" />
     <ClInclude Include="libfacedetection\facedetect-dll.h" />
     <ClInclude Include="liblinear\blas.h" />
     <ClInclude Include="liblinear\blasp.h" />
@@ -179,6 +183,8 @@
     <ClCompile Include="FDLocalBinaryFeatureModelImp.cpp" />
     <ClCompile Include="FDRandomForest.cpp" />
     <ClCompile Include="FDRandomTree.cpp" />
+    <ClCompile Include="FDRegressionTree\FDRegressionTree.cpp" />
+    <ClCompile Include="FDRegressionTree\FDRegressionTreesModel.cpp" />
     <ClCompile Include="liblinear\daxpy.c" />
     <ClCompile Include="liblinear\ddot.c" />
     <ClCompile Include="liblinear\dnrm2.c" />
