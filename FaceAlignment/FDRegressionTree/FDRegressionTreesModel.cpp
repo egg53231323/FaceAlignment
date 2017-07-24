@@ -113,8 +113,7 @@ void FDRegressionTreesModel::GetPixelValue(const FDTrainDataItem &item,
 	cv::Mat_<double> rotation;
 	double scale = 0;
 
-	// 这里有问题吧，current 是图像坐标
-	FDUtility::SimilarityTransform(item.mCurrentShape, referenceShape, rotation, scale);
+	FDUtility::SimilarityTransform(FDUtility::RealToRelative(item.mCurrentShape, item.mBoundingBox), referenceShape, rotation, scale);
 
 	int count = (int)vecIndex.size();
 	for (int i = 0; i < count; i++)
