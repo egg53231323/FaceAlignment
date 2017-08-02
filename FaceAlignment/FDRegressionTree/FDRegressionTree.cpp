@@ -90,6 +90,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 
 	FDRegressionNode &rootNode = mVecNodes[0];
 	rootNode.mDepth = 1;
+	rootNode.mValue = diffSum / (double)sampleCount * mNu;
 
 	std::vector<std::vector<int> > vecAllNodeSampleIndex;
 	vecAllNodeSampleIndex.resize(mMaxNodesNum);
@@ -111,7 +112,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		stackNodeToSplit.pop();
 
 		FDRegressionNode &currentNode = mVecNodes[splitNodeId];
-		std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[splitNodeId];
+		const std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[splitNodeId];
 		if (currentNode.mDepth == mMaxDepth)
 		{
 			currentNode.mLeafNodeId = mLeafNodeNum++;
@@ -139,6 +140,8 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 
 		left.mDepth = currentNode.mDepth + 1;
 		right.mDepth = currentNode.mDepth + 1;
+		left.mValue = (leftDiffSum / (double)lchildren.size()) * mNu;
+		right.mValue = rightDiffSum / (double)rchildren.size() * mNu;
 
 		vecAllNodeSampleIndex[newNodeId].swap(lchildren);
 		vecAllNodeSampleIndex[newNodeId + 1].swap(rchildren);
@@ -148,6 +151,22 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		stackNodeToSplit.push(newNodeId);
 
 		newNodeId += 2;
+	}
+
+	int nodeCount = (int)mVecNodes.size();
+	for (int i = 0; i < nodeCount; i++)
+	{
+		FDRegressionNode &currentNode = mVecNodes[i];
+		if (currentNode.mLeafNodeId < 0)
+			continue;
+
+		const std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[i];
+		int nodeSampleCount = (int)currentSampleIndex.size();
+		for (int j = 0; j < nodeSampleCount; j++)
+		{
+			FDTrainDataItem &item = vecTrainDataItem[currentSampleIndex[j]];
+			item.mCurrentShape += currentNode.mValue;
+		}
 	}
 }
 

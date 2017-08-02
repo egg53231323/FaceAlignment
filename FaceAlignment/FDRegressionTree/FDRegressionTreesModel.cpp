@@ -1,5 +1,6 @@
 #include "FDRegressionTreesModel.h"
 #include "FDUtility.h"
+#include "FDRegressionTree.h"
 
 FDRegressionTreesModelParam::FDRegressionTreesModelParam()
 {
@@ -27,6 +28,12 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 {
 	mStageRandomPoint.clear();
 	mStageRandomPoint.resize(param.mStageNum);
+	mVecIndex.clear();
+	mVecIndex.resize(param.mStageNum);
+	mVecDelta.clear();
+	mVecDelta.resize(param.mStageNum);
+	mForests.clear();
+	mForests.resize(param.mStageNum);
 
 	double minx = 0, miny = 0, maxx = 0, maxy = 0;
 
@@ -38,21 +45,110 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 		GenerateRandomPoint(mStageRandomPoint[i], param.mFeaturePoolSize, minx, miny, maxx, maxy);
 	}
 
+	std::vector<int> vecSampleIndex;
+	int sampleCount = (int)trainData.mVecDataItems.size();
+	for (int i = 0; i < sampleCount; i++)
+	{
+		vecSampleIndex.push_back(i);
+	}
 	for (int i = 0; i < param.mStageNum; i++)
 	{
-		std::vector<int> vecIndex;
-		std::vector<cv::Point2d> vecDelta;
-
 		// all stage use meanshape?
-		CalcDelta(trainData.mMeanShape, mStageRandomPoint[i], vecIndex, vecDelta);
+		CalcDelta(trainData.mMeanShape, mStageRandomPoint[i], mVecIndex[i], mVecDelta[i]);
 
 		int sampleCount = (int)trainData.mVecDataItems.size();
 		std::vector<std::vector<uchar> > samplePointPixelValue(sampleCount);
 		for (int j = 0; j < sampleCount; j++)
 		{
-			GetPixelValue(trainData.mVecDataItems[j], trainData.mMeanShape, vecIndex, vecDelta, samplePointPixelValue[j]);
+			GetPixelValue(trainData.mVecDataItems[j], trainData.mMeanShape, mVecIndex[i], mVecDelta[i], samplePointPixelValue[j]);
+		}
+		// todo set param
+		mForests[i].resize(param.mTreeNumPerStage);
+		for (int j = 0; j < param.mTreeNumPerStage; j++)
+		{
+			mForests[i][j].Train(trainData, vecSampleIndex, mStageRandomPoint[i], samplePointPixelValue);
 		}
 	}
+}
+
+bool FDRegressionTreesModel::Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox /*=NULL*/)
+{
+	uint64 t1 = FDUtility::GetCurrentTime();
+
+	std::vector<cv::Rect> faces;
+	mFaceDetector.FaceDetect(image, faces, mFaceDetectorType);
+
+	uint64 t2 = FDUtility::GetCurrentTime();
+	FDLog("cost detect %d", (int)(t2 - t1));
+	if (faces.empty())
+		return false;
+
+	FDBoundingBox boundingBox;
+
+	int faceCount = (int)faces.size();
+	result.resize(faceCount);
+	for (int i = 0; i < faceCount; i++)
+	{
+		FDUtility::RectToBoundingBox(faces[i], boundingBox);
+
+		Predict(image, result[i], boundingBox);
+		if (NULL != pVecBox)
+		{
+			pVecBox->push_back(boundingBox);
+		}
+	}
+	return true;
+}
+
+bool FDRegressionTreesModel::Predict(const cv::Mat_<uchar> &image, cv::Mat_<double> &result, const FDBoundingBox &boudingBox)
+{
+	uint64 t3 = FDUtility::GetCurrentTime();
+
+	int stageNum = (int)mForests.size();
+	mPredictData.mVecDataItems.clear();
+	mPredictData.mVecDataItems.push_back(FDTrainDataItem());
+	FDTrainDataItem &item = mPredictData.mVecDataItems[0];
+	item.mBoundingBox = boudingBox;
+	item.mImage = image;
+	item.mCurrentShape = FDUtility::RelativeToReal(mPredictData.mMeanShape, item.mBoundingBox);
+	for (int i = 0; i < stageNum; i++)
+	{
+		std::vector<uchar> samplePointPixelValue;
+		GetPixelValue(item, mPredictData.mMeanShape, mVecIndex[i], mVecDelta[i], samplePointPixelValue);
+		int treeCount = (int)mForests[i].size();
+		for (int j = 0; j < treeCount; j++)
+		{
+			FDRegressionTree &tree = mForests[i][j];
+			int nodeId = 0;
+			while (true)
+			{
+				FDRegressionNode &node = tree.mVecNodes[nodeId];
+				if (node.mLeafNodeId >= 0)
+				{
+					item.mCurrentShape += node.mValue;
+					break;
+				}
+				if ((samplePointPixelValue[node.mIdx[0]] - samplePointPixelValue[node.mIdx[1]]) > node.mThreshold)
+				{
+					nodeId = node.mChildrenNodesId[0];
+				}
+				else
+				{
+					nodeId = node.mChildrenNodesId[1];
+				}
+			}
+			
+
+		}
+	}
+
+
+	result = item.mCurrentShape;
+	mPredictData.mVecDataItems.clear();
+
+	uint64 t4 = FDUtility::GetCurrentTime();
+	FDLog("cost predict %d", (int)(t4 - t3));
+	return true;
 }
 
 void FDRegressionTreesModel::GenerateRandomPoint(std::vector<cv::Point2d> &vecPoint, int count, double minx, double miny, double maxx, double maxy)

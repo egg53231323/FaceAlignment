@@ -14,6 +14,7 @@ public:
 	int mDepth;
 	double mThreshold;
 	int mLeafNodeId;
+	cv::Mat_<double> mValue;
 
 	FDRegressionNode();
 	void Print();
@@ -30,6 +31,7 @@ public:
 	// number of maximum nodes
 	int mMaxNodesNum;
 	int mLeafNodeNum;
+	double mNu;
 	// tree nodes
 	std::vector<FDRegressionNode> mVecNodes;
 

@@ -1,7 +1,9 @@
-#ifndef FDRegressionTree_H
-#define FDRegressionTree_H
+#ifndef FDRegressionModel_H
+#define FDRegressionModel_H
 
 #include "FDCVInclude.h"
+#include "FDUtility.h"
+#include "FDFaceDetector.h"
 
 class FDRegressionTreesModelParam
 {
@@ -21,6 +23,7 @@ public:
 class FDBoundingBox;
 class FDTrainData;
 class FDTrainDataItem;
+class FDRegressionTree;
 class FDRegressionTreesModel
 {
 public:
@@ -28,6 +31,8 @@ public:
 	virtual~FDRegressionTreesModel();
 
 	void Train(const FDRegressionTreesModelParam &param, FDTrainData &trainData);
+	bool Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox = NULL);
+	bool Predict(const cv::Mat_<uchar> &image, cv::Mat_<double> &result, const FDBoundingBox &boudingBox);
 
 protected:
 	void GenerateRandomPoint(std::vector<cv::Point2d> &vecPoint, int count, double minx, double miny, double maxx, double maxy);
@@ -45,6 +50,12 @@ protected:
 
 protected:
 	std::vector<std::vector<cv::Point2d> > mStageRandomPoint;
+	std::vector<std::vector<int> > mVecIndex;
+	std::vector<std::vector<cv::Point2d> > mVecDelta;
+	std::vector<std::vector<FDRegressionTree> > mForests;
+	FDTrainData mPredictData;
+	FDFaceDetector mFaceDetector;
+	int mFaceDetectorType;
 };
 
 #endif
