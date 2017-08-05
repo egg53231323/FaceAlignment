@@ -12,6 +12,7 @@ FDRegressionTreesModelParam::FDRegressionTreesModelParam()
 	mShapeGenerateNumPerSample = 20; // todo check it
 	mLambda = 0.1;
 	mFeaturePoolSize = 400;
+	mFeatureGenerateCount = 20;
 }
 
 FDRegressionTreesModel::FDRegressionTreesModel()
@@ -53,7 +54,6 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 	}
 	for (int i = 0; i < param.mStageNum; i++)
 	{
-		// all stage use meanshape?
 		CalcDelta(trainData.mMeanShape, mStageRandomPoint[i], mVecIndex[i], mVecDelta[i]);
 
 		int sampleCount = (int)trainData.mVecDataItems.size();
@@ -62,11 +62,10 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 		{
 			GetPixelValue(trainData.mVecDataItems[j], trainData.mMeanShape, mVecIndex[i], mVecDelta[i], samplePointPixelValue[j]);
 		}
-		// todo set param
 		mForests[i].resize(param.mTreeNumPerStage);
 		for (int j = 0; j < param.mTreeNumPerStage; j++)
 		{
-			mForests[i][j].SetParam(param.mTreeDepth, param.mNu, param.mLambda);
+			mForests[i][j].SetParam(param.mTreeDepth, param.mFeatureGenerateCount, param.mNu, param.mLambda);
 			mForests[i][j].Train(trainData, vecSampleIndex, mStageRandomPoint[i], samplePointPixelValue);
 		}
 	}

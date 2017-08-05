@@ -16,6 +16,7 @@ public:
 	int mShapeGenerateNumPerSample;
 	double mLambda;
 	int mFeaturePoolSize;
+	int mFeatureGenerateCount;
 
 	FDRegressionTreesModelParam();
 };

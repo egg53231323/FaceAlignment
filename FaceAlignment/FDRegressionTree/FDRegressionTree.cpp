@@ -62,7 +62,7 @@ FDRegressionTree::FDRegressionTree()
 	mMaxNodesNum = (int)(pow(2, mMaxDepth) - 1);
 	mLeafNodeNum = 0;
 
-	mFeatureGenerateCount = 500;
+	mFeatureGenerateCount = 20;
 
 	mVecNodes.resize(mMaxNodesNum);
 
@@ -75,12 +75,14 @@ FDRegressionTree::~FDRegressionTree()
 
 }
 
-void FDRegressionTree::SetParam(int maxDepth, double nu, double lambda)
+void FDRegressionTree::SetParam(int maxDepth, int featureGenerateCount, double nu, double lambda)
 {
 	mMaxDepth = maxDepth;
 	mMaxNodesNum = (int)(pow(2, mMaxDepth) - 1);
 
 	mVecNodes.resize(mMaxNodesNum);
+
+	mFeatureGenerateCount = featureGenerateCount;
 
 	mNu = nu;
 	mLambda = lambda;
@@ -88,8 +90,6 @@ void FDRegressionTree::SetParam(int maxDepth, double nu, double lambda)
 
 void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecSampleIndex, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue)
 {
-	// 求和，下一步分裂
-
 	mLeafNodeNum = 0;
 	std::vector<FDTrainDataItem> &vecTrainDataItem = trainData.mVecDataItems;
 	int sampleCount = (int)vecSampleIndex.size();
@@ -110,6 +110,9 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 	vecAllNodeSampleIndex.resize(mMaxNodesNum);
 	vecAllNodeSampleIndex[0] = vecSampleIndex;
 
+	std::vector<cv::Mat_<double> > vecDiffSum(mMaxNodesNum);
+	vecDiffSum[0] = diffSum;
+
 	int newNodeId = 1;
 
 	std::vector<int> lchildren, rchildren;
@@ -127,6 +130,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 
 		FDRegressionNode &currentNode = mVecNodes[splitNodeId];
 		const std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[splitNodeId];
+		const cv::Mat_<double> &curDiffSum = vecDiffSum[splitNodeId];
 		if (currentNode.mDepth == mMaxDepth)
 		{
 			currentNode.mLeafNodeId = mLeafNodeNum++;
@@ -134,7 +138,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		}
 
 		cv::Mat_<double> leftDiffSum, rightDiffSum;
-		SplitNode(trainData, currentSampleIndex, diffSum, points, samplePointPixelValue, feature, lchildren, rchildren, leftDiffSum, rightDiffSum);
+		SplitNode(trainData, currentSampleIndex, curDiffSum, points, samplePointPixelValue, feature, lchildren, rchildren, leftDiffSum, rightDiffSum);
 		if (lchildren.empty() || rchildren.empty())
 		{
 			currentNode.mLeafNodeId = mLeafNodeNum++;
@@ -155,7 +159,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		left.mDepth = currentNode.mDepth + 1;
 		right.mDepth = currentNode.mDepth + 1;
 		left.mValue = (leftDiffSum / (double)lchildren.size()) * mNu;
-		right.mValue = rightDiffSum / (double)rchildren.size() * mNu;
+		right.mValue = (rightDiffSum / (double)rchildren.size()) * mNu;
 
 		vecAllNodeSampleIndex[newNodeId].swap(lchildren);
 		vecAllNodeSampleIndex[newNodeId + 1].swap(rchildren);
@@ -168,6 +172,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 	}
 
 	int nodeCount = (int)mVecNodes.size();
+	int leafSampleCount = 0;
 	for (int i = 0; i < nodeCount; i++)
 	{
 		FDRegressionNode &currentNode = mVecNodes[i];
@@ -176,11 +181,17 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 
 		const std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[i];
 		int nodeSampleCount = (int)currentSampleIndex.size();
+		leafSampleCount += nodeSampleCount;
 		for (int j = 0; j < nodeSampleCount; j++)
 		{
 			FDTrainDataItem &item = vecTrainDataItem[currentSampleIndex[j]];
 			item.mCurrentShape += currentNode.mValue;
 		}
+	}
+	FDLog("tree sample count: %d, leaf sample count %d, %s", sampleCount, leafSampleCount);
+	if (sampleCount != leafSampleCount)
+	{
+		FDLog("tree sample count != leaf sample count !!!!!!!!!!!!!!!!!!");
 	}
 }
 
@@ -199,20 +210,22 @@ void FDRegressionTree::GenerateTestFeature(const std::vector<cv::Point2d> &point
 			if (feature.mIdx1 == feature.mIdx2) {
 				continue;
 			}
-			// todo points 是（0， 1）坐标？
+			// point 是meanshape 中的坐标系 (-1 -1) -> (1, 1)
 			double dis = PT_DIS(points[feature.mIdx1], points[feature.mIdx2]);
+			// todo 对应到(0, 0) -> (1, 1)是不是要 *2， 或者调整lambda ?
+			dis = dis * 2;
 			double acceptProbability = std::exp(-dis / lambda);
-			if (!(acceptProbability > randomNumGenerator.uniform((double)0, (double)1))) {
+			if (!(acceptProbability > randomNumGenerator.uniform((double)0.0, (double)1.0))) {
 				break;
 			}
 		}
-		feature.mThreshold = (randomNumGenerator.uniform((double)0, (double)1) * 256 - 128) / 2.0;
+		feature.mThreshold = (randomNumGenerator.uniform((double)0.0, (double)1.0) * 256 - 128) / 2.0;
 		features.push_back(feature);
 	}
 }
 
 void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector<int> &vecSampleIndex, 
-	cv::Mat_<double> &diffSum, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue, 
+	const cv::Mat_<double> &diffSum, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue, 
 	FDNodeSplitFeature &splitFeature, std::vector<int> &leftSampleIndex, std::vector<int> &rightSampleIndex, 
 	cv::Mat_<double> &leftDiffSum, cv::Mat_<double> &rightDiffSum)
 {
@@ -227,7 +240,6 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 	}
 
 	std::vector<FDNodeSplitFeature> features;
-	// todo 参数设置
 	GenerateTestFeature(points, features, mFeatureGenerateCount, mLambda);
 
 	std::vector<cv::Mat_<double> > leftTempSum(mFeatureGenerateCount, cv::Mat_<double>::zeros(diffSum.rows, diffSum.cols));
@@ -243,7 +255,7 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 		for (int j = 0; j < mFeatureGenerateCount; j++)
 		{
 			const FDNodeSplitFeature &feature = features[j];
-			if ((pixelValue[feature.mIdx1] - pixelValue[feature.mIdx2]) > feature.mThreshold)
+			if (((double)pixelValue[feature.mIdx1] - (double)pixelValue[feature.mIdx2]) > feature.mThreshold)
 			{
 				leftTempSum[j] += item.mShapeResidual;
 				leftTempCount[j]++;
@@ -257,8 +269,9 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 	{
 		const cv::Mat_<double> &tempLeft = leftTempSum[j];
 		int leftCount = leftTempCount[j];
-		int rightCount = sampleCount = leftCount;
+		int rightCount = sampleCount - leftCount;
 		cv::Mat_<double> tempRight = diffSum - tempLeft;
+		val = 0;
 		if (leftCount > 0)
 		{
 			val += tempLeft.dot(tempLeft) / leftCount;
@@ -283,7 +296,7 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 	{
 		const FDTrainDataItem &item = trainData.mVecDataItems[vecSampleIndex[i]];
 		const std::vector<uchar> &pixelValue = samplePointPixelValue[vecSampleIndex[i]];
-		if ((pixelValue[resFeature.mIdx1] - pixelValue[resFeature.mIdx2]) > resFeature.mThreshold)
+		if (((double)pixelValue[resFeature.mIdx1] - (double)pixelValue[resFeature.mIdx2]) > resFeature.mThreshold)
 		{
 			leftDiffSum += item.mShapeResidual;
 			leftSampleIndex.push_back(i);

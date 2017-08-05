@@ -39,19 +39,18 @@ public:
 public:
 	FDRegressionTree();
 	virtual~FDRegressionTree();
-	void SetParam(int maxDepth, double nu, double lambda);
+	void SetParam(int maxDepth, int featureGenerateCount, double nu, double lambda);
 	void Train(FDTrainData &trainData, const std::vector<int> vecSampleIndex, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue);
 
 protected:
 	void GenerateTestFeature(const std::vector<cv::Point2d> &points, std::vector<FDNodeSplitFeature> &features, int generateNum, double lambda);
 	void SplitNode(const FDTrainData &trainData, const std::vector<int> &vecSampleIndex, 
-		cv::Mat_<double> &diffSum, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue, 
+		const cv::Mat_<double> &diffSum, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue,
 		FDNodeSplitFeature &splitFeature, std::vector<int> &leftSampleIndex, std::vector<int> &rightSampleIndex, 
 		cv::Mat_<double> &leftDiffSum, cv::Mat_<double> &rightDiffSum);
 	
 protected:
 	int mFeatureGenerateCount;
-	std::vector<cv::Mat_<double> > mLeafValues;
 };
 
 #endif
