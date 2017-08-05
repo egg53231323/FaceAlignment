@@ -26,6 +26,11 @@ FDRegressionTreesModel::~FDRegressionTreesModel()
 
 }
 
+void FDRegressionTreesModel::SetCascadeClassifierModelPath(const char *path)
+{
+	mFaceDetector.SetCascadeClassifierModelPath(path);
+}
+
 void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDTrainData &trainData)
 {
 	mStageRandomPoint.clear();

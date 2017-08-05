@@ -5,6 +5,7 @@
 #include "FDCVInclude.h"
 #include "FDUtility.h"
 #include "FDLocalBinaryFeatureModel.h"
+#include "FDRegressionTree/FDRegressionTreesModel.h"
 #include <fstream>
 #include <iomanip>
 
@@ -170,24 +171,144 @@ void TestWithCamera()
 	}
 }
 
+void TrainModel_2()
+{
+	FDTrainData trainData;
+	FDRegressionTreesModelParam param;
+	FDRegressionTreesModel model;
+	std::string strDir = FD_TEMP_DIR;
+	std::string cascadeClassifierModelPath = strDir + "haarcascade_frontalface_alt.xml";
+	std::vector<std::string> vecPath;
+	//vecPath.push_back(strDir + "list_afw.txt");
+	vecPath.push_back(strDir + "list_helen.txt");
+	//vecPath.push_back(strDir + "list_helen_test.txt");
+	//vecPath.push_back(strDir + "list_lfpw.txt");
+	//vecPath.push_back(strDir + "list_lfpw_test.txt");
+	//vecPath.push_back(strDir + "list_ibug.txt");
+	//vecPath.push_back(strDir + "list_300windoor.txt");
+	//vecPath.push_back(strDir + "list_300woutdoor.txt");
+
+	std::vector<std::string> vecImgPath;
+	FDUtility::GenerateTrainData(vecPath, cascadeClassifierModelPath, param.mShapeGenerateNumPerSample, trainData, &vecImgPath);
+
+	model.SetCascadeClassifierModelPath(cascadeClassifierModelPath.c_str());
+	model.Train(param, trainData);
+
+	model.Save(FDUtility::StdStringFormat(std::string(), "%s/model/model_2.dat", FD_TEMP_DIR).c_str());
+}
+
+void LoadModel_2(FDRegressionTreesModel &model)
+{
+	std::string strDir = FD_TEMP_DIR;
+	std::string cascadeClassifierModelPath = strDir + "haarcascade_frontalface_alt.xml";
+	model.SetCascadeClassifierModelPath(cascadeClassifierModelPath.c_str());
+	model.Load(FDUtility::StdStringFormat(std::string(), "%s/model/model_2.dat", FD_TEMP_DIR).c_str());
+}
+
+void TestModel_2()
+{
+	std::string strDir = FD_TEMP_DIR;
+	std::vector<std::string> vecPath;
+	vecPath.push_back(strDir + "list_helen.txt");
+	vecPath.push_back(strDir + "list_helen_test.txt");
+	//vecPath.push_back(strDir + "list_afw.txt");
+	//vecPath.push_back(strDir + "list_ibug.txt");
+	//vecPath.push_back(strDir + "list_lfpw_test.txt");
+	//vecPath.push_back(strDir + "list_300windoor.txt");
+	//vecPath.push_back(strDir + "list_300woutdoor.txt");
+
+	std::string tempPath;
+	std::vector<std::string> vecImgPath;
+	vecImgPath.push_back(std::string(FD_TEMP_DIR) + "../TestData/img/1.jpg");
+	int listCount = (int)vecPath.size();
+
+	for (int i = 0; i < listCount; i++)
+	{
+		std::ifstream fin;
+		fin.open(vecPath[i]);
+
+		while (std::getline(fin, tempPath))
+		{
+			vecImgPath.push_back(tempPath);
+		}
+	}
+
+	FDLocalBinaryFeatureModel model;
+	LoadModel(model);
+
+	int testCount = (int)vecImgPath.size();
+	for (int i = 0; i < testCount; i++)
+	{
+		FDLog("test: %s (%d/%d)", vecImgPath[i].c_str(), i + 1, testCount);
+		cv::Mat_<uchar> test = cv::imread(vecImgPath[i], cv::IMREAD_GRAYSCALE);
+		cv::Mat testColor = cv::imread(vecImgPath[i]);
+		std::vector<cv::Mat_<double> > result;
+		if (model.Predict(test, result))
+		{
+			int count = (int)result.size();
+			for (int j = 0; j < count; j++)
+			{
+				FDUtility::DrawShape(result[j], testColor, 255);
+				cv::imwrite(FDUtility::StdStringFormat(std::string(), "%s/result/%d.jpg", FD_TEMP_DIR, i).c_str(), testColor);
+				/*
+				FDLog("rows: %d", result.rows);
+				for (int j = 0; j < result.rows; j++)
+				{
+				FDLog("(%d %d) = (%d %d)", i, j, (int)result(j, 0), (int)result(j, 1));
+				}
+				*/
+			}
+		}
+		else
+		{
+			FDLog("%s not detect face", vecImgPath[i].c_str());
+		}
+	}
+}
+
+
 int main()
 {
-	int type = 2;
-	switch (type)
+	bool model1 = false;
+	if (model1)
 	{
-	case 0:
-		TrainModel();
-		break;
-	case 1:
-		TestModel();
-		break;
-	case 2:
-		TestWithCamera();
-		break;
-	default:
-		TestWithCamera();
-		break;
+		int type = 2;
+		switch (type)
+		{
+		case 0:
+			TrainModel();
+			break;
+		case 1:
+			TestModel();
+			break;
+		case 2:
+			TestWithCamera();
+			break;
+		default:
+			TestWithCamera();
+			break;
+		}
 	}
+	else
+	{
+		int type = 1;
+		switch (type)
+		{
+		case 0:
+			TrainModel_2();
+			break;
+		case 1:
+			TestModel_2();
+			break;
+		case 2:
+			//TestWithCamera_2();
+			break;
+		default:
+			//TestWithCamera_2();
+			break;
+		}
+	}
+
 	FDLog("process end");
 	cv::waitKey();
     return 0;

@@ -31,6 +31,8 @@ public:
 	FDRegressionTreesModel();
 	virtual~FDRegressionTreesModel();
 
+	void SetCascadeClassifierModelPath(const char *path);
+
 	void Train(const FDRegressionTreesModelParam &param, FDTrainData &trainData);
 	bool Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox = NULL);
 	bool Predict(const cv::Mat_<uchar> &image, cv::Mat_<double> &result, const FDBoundingBox &boudingBox);
