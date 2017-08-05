@@ -35,6 +35,8 @@ public:
 	bool Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox = NULL);
 	bool Predict(const cv::Mat_<uchar> &image, cv::Mat_<double> &result, const FDBoundingBox &boudingBox);
 
+	bool Save(const char *path);
+	bool Load(const char *path);
 protected:
 	void GenerateRandomPoint(std::vector<cv::Point2d> &vecPoint, int count, double minx, double miny, double maxx, double maxy);
 
@@ -48,6 +50,9 @@ protected:
 		const std::vector<int> &vecIndex, 
 		const std::vector<cv::Point2d> &vecDelta,
 		std::vector<uchar> &pixelValue);
+
+	void ReadMeanShape(std::ifstream& fs);
+	void WriteMeanShape(std::ofstream& fs);
 
 protected:
 	std::vector<std::vector<cv::Point2d> > mStageRandomPoint;

@@ -42,6 +42,9 @@ public:
 	void SetParam(int maxDepth, int featureGenerateCount, double nu, double lambda);
 	void Train(FDTrainData &trainData, const std::vector<int> vecSampleIndex, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue);
 
+	void Read(std::ifstream& fs);
+	void Write(std::ofstream& fs);
+
 protected:
 	void GenerateTestFeature(const std::vector<cv::Point2d> &points, std::vector<FDNodeSplitFeature> &features, int generateNum, double lambda);
 	void SplitNode(const FDTrainData &trainData, const std::vector<int> &vecSampleIndex, 

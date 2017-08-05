@@ -1,6 +1,7 @@
 #include "FDRegressionTreesModel.h"
 #include "FDUtility.h"
 #include "FDRegressionTree.h"
+#include <fstream>
 
 FDRegressionTreesModelParam::FDRegressionTreesModelParam()
 {
@@ -229,4 +230,117 @@ void FDRegressionTreesModel::GetPixelValue(const FDTrainDataItem &item,
 			pixelValue[i] = item.mImage(y, x);
 		}
 	}
+}
+
+bool FDRegressionTreesModel::Save(const char *path)
+{
+	if (mForests.empty() || mStageRandomPoint.size() != mForests.size())
+		return false;
+
+	std::ofstream fs(path, std::ios::binary);
+
+	int stageNum = (int)mStageRandomPoint.size();
+	fs.write((const char *)&stageNum, sizeof(int));
+	for (int i = 0; i < stageNum; i++)
+	{
+		std::vector<cv::Point2d> &points = mStageRandomPoint[i];
+		int count = (int)points.size();
+		fs.write((const char *)&count, sizeof(int));
+		for (int j = 0; j < count; j++)
+		{
+			fs.write((const char *)&(points[j].x), sizeof(double));
+			fs.write((const char *)&(points[j].y), sizeof(double));
+		}
+	}
+
+	for (int i = 0; i < stageNum; i++)
+	{
+		std::vector<FDRegressionTree> &trees = mForests[i];
+		int count = (int)trees.size();
+		fs.write((const char *)&count, sizeof(int));
+		for (int j = 0; j < count; j++)
+		{
+			trees[j].Write(fs);
+		}
+	}
+	WriteMeanShape(fs);
+	fs.write((const char *)&mFaceDetectorType, sizeof(int));
+	return true;
+}
+
+bool FDRegressionTreesModel::Load(const char *path)
+{
+	std::ifstream fs(path, std::ios::binary);
+
+	int stageNum = 0;
+	fs.read((char *)&stageNum, sizeof(int));
+	mStageRandomPoint.resize(stageNum);
+	for (int i = 0; i < stageNum; i++)
+	{
+		std::vector<cv::Point2d> &points = mStageRandomPoint[i];
+		int count = 0;
+		fs.read((char *)&count, sizeof(int));
+		points.resize(count);
+		for (int j = 0; j < count; j++)
+		{
+			fs.read((char *)&(points[j].x), sizeof(double));
+			fs.read((char *)&(points[j].y), sizeof(double));
+		}
+	}
+
+	mForests.resize(stageNum);
+	for (int i = 0; i < stageNum; i++)
+	{
+		std::vector<FDRegressionTree> &trees = mForests[i];
+		int count = 0;
+		fs.read((char *)&count, sizeof(int));
+		trees.resize(count);
+		for (int j = 0; j < count; j++)
+		{
+			trees[j].Read(fs);
+		}
+	}
+	ReadMeanShape(fs);
+	fs.read((char *)&mFaceDetectorType, sizeof(int));
+	fs.close();
+	std::cout << "face detector type: " << mFaceDetectorType << std::endl;
+
+	mVecIndex.resize(stageNum);
+	mVecDelta.resize(stageNum);
+	for (int i = 0; i < stageNum; i++)
+	{
+		CalcDelta(mPredictData.mMeanShape, mStageRandomPoint[i], mVecIndex[i], mVecDelta[i]);
+	}
+	return !mForests.empty();
+}
+
+void FDRegressionTreesModel::ReadMeanShape(std::ifstream& fs)
+{
+	int rows = 0;
+	fs.read((char *)&rows, sizeof(int));
+	double *val = new double[rows * 2];
+	fs.read((char *)val, sizeof(double) * rows * 2);
+	mPredictData.mMeanShape = cv::Mat_<double>(rows, 2);
+	for (int i = 0; i < rows; i++)
+	{
+		mPredictData.mMeanShape(i, 0) = val[i * 2];
+		mPredictData.mMeanShape(i, 1) = val[i * 2 + 1];
+	}
+	delete[]val;
+	val = NULL;
+}
+
+void FDRegressionTreesModel::WriteMeanShape(std::ofstream& fs)
+{
+	int rows = mPredictData.mMeanShape.rows;
+	fs.write((const char *)&rows, sizeof(int));
+	double *val = new double[rows * 2];
+	for (int i = 0; i < rows; i++)
+	{
+		val[i * 2] = mPredictData.mMeanShape(i, 0);
+		val[i * 2 + 1] = mPredictData.mMeanShape(i, 1);
+	}
+	fs.write((const char *)val, sizeof(double) * rows * 2);
+	delete[]val;
+	val = NULL;
 }

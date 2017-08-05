@@ -43,6 +43,24 @@ void FDRegressionNode::Read(std::ifstream& fs)
 	fs.read((char *)&mDepth, sizeof(int));
 	fs.read((char *)&mLeafNodeId, sizeof(int));
 	fs.read((char *)&mThreshold, sizeof(double));
+	if (mLeafNodeId >= 0)
+	{
+		int rows = 0, cols = 0;
+		fs.read((char *)&rows, sizeof(int));
+		fs.read((char *)&cols, sizeof(int));
+		double *data = new double[rows * cols];
+		fs.read((char *)data, sizeof(double) * rows * cols);
+		mValue = cv::Mat_<double>(rows, cols);
+		for (int i = 0; i < mValue.rows; i++)
+		{
+			for (int j = 0; j < mValue.cols; j++)
+			{
+				mValue(i, j) = data[i * mValue.cols + j];
+			}
+		}
+		delete[]data;
+		data = NULL;
+	}
 }
 
 void FDRegressionNode::Write(std::ofstream& fs)
@@ -52,7 +70,22 @@ void FDRegressionNode::Write(std::ofstream& fs)
 	fs.write((const char *)&mDepth, sizeof(int));
 	fs.write((const char *)&mLeafNodeId, sizeof(int));
 	fs.write((const char *)&mThreshold, sizeof(double));
-	fs.write((const char *)&mLeafNodeId, sizeof(int));
+	if (mLeafNodeId >= 0)
+	{
+		fs.write((const char *)&(mValue.rows), sizeof(int));
+		fs.write((const char *)&(mValue.cols), sizeof(int));
+		double *data = new double[mValue.rows*mValue.cols];
+		for (int i = 0; i < mValue.rows; i++)
+		{
+			for (int j = 0; j < mValue.cols; j++)
+			{
+				data[i * mValue.cols + j] = mValue(i, j);
+			}
+		}
+		fs.write((const char *)data, sizeof(double) * mValue.rows * mValue.cols);
+		delete[]data;
+		data = NULL;
+	}
 }
 
 
@@ -308,4 +341,29 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 	}
 	rightDiffSum = diffSum - leftDiffSum;
 	splitFeature = resFeature;
+}
+
+void FDRegressionTree::Read(std::ifstream& fs)
+{
+	fs.read((char *)&mMaxDepth, sizeof(int));
+	fs.read((char *)&mMaxNodesNum, sizeof(int));
+	fs.read((char *)&mLeafNodeNum, sizeof(int));
+
+	mVecNodes.resize(mMaxNodesNum);
+	for (int i = 0; i < mMaxNodesNum; i++)
+	{
+		mVecNodes[i].Read(fs);
+	}
+}
+
+void FDRegressionTree::Write(std::ofstream& fs)
+{
+	fs.write((const char *)&mMaxDepth, sizeof(int));
+	fs.write((const char *)&mMaxNodesNum, sizeof(int));
+	fs.write((const char *)&mLeafNodeNum, sizeof(int));
+
+	for (int i = 0; i < mMaxNodesNum; i++)
+	{
+		mVecNodes[i].Write(fs);
+	}
 }
