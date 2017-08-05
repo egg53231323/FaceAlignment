@@ -126,7 +126,8 @@ bool FDRegressionTreesModel::Predict(const cv::Mat_<uchar> &image, cv::Mat_<doub
 				FDRegressionNode &node = tree.mVecNodes[nodeId];
 				if (node.mLeafNodeId >= 0)
 				{
-					item.mCurrentShape += node.mValue;
+					// 每一棵数都加了，所以训练需要乘以一个Nu系数？还是直接取树数均值？
+					item.mCurrentShape += FDUtility::RelativeToReal(node.mValue, item.mBoundingBox);
 					break;
 				}
 				if ((samplePointPixelValue[node.mIdx[0]] - samplePointPixelValue[node.mIdx[1]]) > node.mThreshold)

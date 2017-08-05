@@ -131,7 +131,9 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 	for (int i = 0; i < sampleCount; i++)
 	{
 		FDTrainDataItem &item = vecTrainDataItem[vecSampleIndex[i]];
+		// mGroundTruthShape mCurrentShape 是图像坐标，要变换一下
 		item.mShapeResidual = item.mGroundTruthShape - item.mCurrentShape;
+		item.mShapeResidual = FDUtility::RealToRelative(item.mShapeResidual, item.mBoundingBox);
 		diffSum = diffSum + item.mShapeResidual;
 	}
 
@@ -218,7 +220,7 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		for (int j = 0; j < nodeSampleCount; j++)
 		{
 			FDTrainDataItem &item = vecTrainDataItem[currentSampleIndex[j]];
-			item.mCurrentShape += currentNode.mValue;
+			item.mCurrentShape += FDUtility::RelativeToReal(currentNode.mValue, item.mBoundingBox);
 		}
 	}
 	FDLog("tree sample count: %d, leaf sample count %d, %s", sampleCount, leafSampleCount);
