@@ -66,6 +66,7 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 		mForests[i].resize(param.mTreeNumPerStage);
 		for (int j = 0; j < param.mTreeNumPerStage; j++)
 		{
+			mForests[i][j].SetParam(param.mTreeDepth, param.mNu, param.mLambda);
 			mForests[i][j].Train(trainData, vecSampleIndex, mStageRandomPoint[i], samplePointPixelValue);
 		}
 	}

@@ -148,6 +148,9 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 
 	std::vector<FDTrainDataItem> &generateData = trainData.mVecDataItems;
 	generateData.clear();
+	generateData.swap(srcData);
+	CalcMeanShape(trainData);
+	generateData.swap(srcData);
 	
 	cv::RNG randomNumberGenerator(GetUInt64Value());
 	int srcCount = (int)srcData.size();
@@ -171,25 +174,22 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 			item.mGroundTruthShape = srcItem.mGroundTruthShape;
 			item.mBoundingBox = srcItem.mBoundingBox;
 
-			item.mCurrentShape = RealToRelative(curShapeItem.mGroundTruthShape, curShapeItem.mBoundingBox);
-			item.mCurrentShape = RelativeToReal(item.mCurrentShape, srcItem.mBoundingBox);
+			if (j == 0)
+			{
+				item.mCurrentShape = trainData.mMeanShape;
+			}
+			else
+			{
+				// todo random get part point to generate the shape ?
+				item.mCurrentShape = RealToRelative(curShapeItem.mGroundTruthShape, curShapeItem.mBoundingBox);
+				item.mCurrentShape = RelativeToReal(item.mCurrentShape, srcItem.mBoundingBox);
+			}
+
 			
 #ifdef SAVE_TRAIN_DATA_TO_FILE
 			OutputItemInfo(item, StdStringFormat(std::string(), "%s/temp/%d.jpg", FD_TEMP_DIR, k).c_str());
 #endif
 			++k;
-		}
-	}
-
-	CalcMeanShape(trainData);
-	if (shapeGenerateNumPerSample <= 1)
-	{
-		std::vector<FDTrainDataItem> &vecItem = trainData.mVecDataItems;
-		int count = (int)vecItem.size();
-		for (int i = 0; i < count; i++)
-		{
-			FDTrainDataItem &item = vecItem[i];
-			item.mCurrentShape = RelativeToReal(trainData.mMeanShape, item.mBoundingBox);
 		}
 	}
 

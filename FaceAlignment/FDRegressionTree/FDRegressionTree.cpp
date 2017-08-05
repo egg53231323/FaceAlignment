@@ -65,11 +65,25 @@ FDRegressionTree::FDRegressionTree()
 	mFeatureGenerateCount = 500;
 
 	mVecNodes.resize(mMaxNodesNum);
+
+	mNu = 0;
+	mLambda = 0;
 }
 
 FDRegressionTree::~FDRegressionTree()
 {
 
+}
+
+void FDRegressionTree::SetParam(int maxDepth, double nu, double lambda)
+{
+	mMaxDepth = maxDepth;
+	mMaxNodesNum = (int)(pow(2, mMaxDepth) - 1);
+
+	mVecNodes.resize(mMaxNodesNum);
+
+	mNu = nu;
+	mLambda = lambda;
 }
 
 void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecSampleIndex, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue)
@@ -214,7 +228,7 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 
 	std::vector<FDNodeSplitFeature> features;
 	// todo ≤Œ ˝…Ë÷√
-	GenerateTestFeature(points, features, mFeatureGenerateCount, 0.5);
+	GenerateTestFeature(points, features, mFeatureGenerateCount, mLambda);
 
 	std::vector<cv::Mat_<double> > leftTempSum(mFeatureGenerateCount, cv::Mat_<double>::zeros(diffSum.rows, diffSum.cols));
 	std::vector<int> leftTempCount(mFeatureGenerateCount, 0);

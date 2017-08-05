@@ -32,12 +32,14 @@ public:
 	int mMaxNodesNum;
 	int mLeafNodeNum;
 	double mNu;
+	double mLambda;
 	// tree nodes
 	std::vector<FDRegressionNode> mVecNodes;
 
 public:
 	FDRegressionTree();
 	virtual~FDRegressionTree();
+	void SetParam(int maxDepth, double nu, double lambda);
 	void Train(FDTrainData &trainData, const std::vector<int> vecSampleIndex, const std::vector<cv::Point2d> &points, const std::vector<std::vector<uchar> > &samplePointPixelValue);
 
 protected:
