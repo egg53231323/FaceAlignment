@@ -176,7 +176,7 @@ void FDUtility::GenerateTrainData(std::vector<std::string> &vecFileListPath, con
 
 			if (j == 0)
 			{
-				item.mCurrentShape = trainData.mMeanShape;
+				item.mCurrentShape = RelativeToReal(trainData.mMeanShape, srcItem.mBoundingBox);
 			}
 			else
 			{

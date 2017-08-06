@@ -233,8 +233,8 @@ void TestModel_2()
 		}
 	}
 
-	FDLocalBinaryFeatureModel model;
-	LoadModel(model);
+	FDRegressionTreesModel model;
+	LoadModel_2(model);
 
 	int testCount = (int)vecImgPath.size();
 	for (int i = 0; i < testCount; i++)
@@ -250,13 +250,6 @@ void TestModel_2()
 			{
 				FDUtility::DrawShape(result[j], testColor, 255);
 				cv::imwrite(FDUtility::StdStringFormat(std::string(), "%s/result/%d.jpg", FD_TEMP_DIR, i).c_str(), testColor);
-				/*
-				FDLog("rows: %d", result.rows);
-				for (int j = 0; j < result.rows; j++)
-				{
-				FDLog("(%d %d) = (%d %d)", i, j, (int)result(j, 0), (int)result(j, 1));
-				}
-				*/
 			}
 		}
 		else
@@ -266,6 +259,61 @@ void TestModel_2()
 	}
 }
 
+
+void TestWithCamera_2()
+{
+	FDRegressionTreesModel model;
+	LoadModel_2(model);
+
+	std::string strDir = std::string(FD_TEMP_DIR) + "/temp/";
+	std::string strOutputName = "photo";
+	std::string strPath = strDir + strOutputName + ".png";
+	std::string strPathLandmark = strDir + strOutputName + ".pts";
+	std::string strPathWithLandmark = strDir + strOutputName + "withlandmark.png";
+
+	cv::VideoCapture videoCapture;
+	videoCapture.open(0);
+	if (!videoCapture.isOpened())
+	{
+		FDLog("camera open failed!");
+		return;
+	}
+	videoCapture.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+	videoCapture.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+	cv::Mat frame;
+	cv::Mat saveFrame;
+	cv::Mat gray;
+	while (true)
+	{
+		videoCapture >> frame;
+		cv::flip(frame, frame, 1);
+		cv::Mat dst(frame.rows, frame.cols, frame.type());
+		//cv::resize(frame, dst, cv::Size(frame.cols / 4, frame.rows / 4));
+		saveFrame = frame.clone();
+		cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+		std::vector<cv::Mat_<double> > result;
+		std::vector<FDBoundingBox> vecBox;
+		if (model.Predict(gray, result, &vecBox))
+		{
+			int count = (int)result.size();
+			for (int j = 0; j < count; j++)
+			{
+				FDUtility::DrawShape(cv::Mat_<double>(result[j]), frame, 255);
+				cv::rectangle(frame, cv::Rect(vecBox[j].m_x, vecBox[j].m_y, vecBox[j].m_width, vecBox[j].m_height), cv::Scalar(255, 0, 0));
+				//cv::rectangle(frame, cv::Rect(vecBox[j].m_x-100, vecBox[j].m_y-100, vecBox[j].m_width+200, vecBox[j].m_height+200), cv::Scalar(0, 255, 0));
+			}
+		}
+
+		cv::imshow("result", frame);
+		char ch = cv::waitKey(5);
+		if (ch == 's' && !result.empty())
+		{
+			cv::imwrite(strPath, saveFrame);
+			cv::imwrite(strPathWithLandmark, frame);
+			SaveLandmarkToFile(strPathLandmark.c_str(), result[0]);
+		}
+	}
+}
 
 int main()
 {
@@ -291,7 +339,7 @@ int main()
 	}
 	else
 	{
-		int type = 1;
+		int type = 2;
 		switch (type)
 		{
 		case 0:
@@ -301,10 +349,10 @@ int main()
 			TestModel_2();
 			break;
 		case 2:
-			//TestWithCamera_2();
+			TestWithCamera_2();
 			break;
 		default:
-			//TestWithCamera_2();
+			TestWithCamera_2();
 			break;
 		}
 	}

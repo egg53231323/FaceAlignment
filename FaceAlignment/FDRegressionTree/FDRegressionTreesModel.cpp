@@ -33,6 +33,7 @@ void FDRegressionTreesModel::SetCascadeClassifierModelPath(const char *path)
 
 void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDTrainData &trainData)
 {
+	mFaceDetectorType = FD_FACE_DETECTOR_TYPE;
 	mStageRandomPoint.clear();
 	mStageRandomPoint.resize(param.mStageNum);
 	mVecIndex.clear();
@@ -71,10 +72,12 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 		mForests[i].resize(param.mTreeNumPerStage);
 		for (int j = 0; j < param.mTreeNumPerStage; j++)
 		{
+			FDLog("stage: %d/%d, trees: %d/%d", i+1, param.mStageNum, j+1, param.mTreeNumPerStage);
 			mForests[i][j].SetParam(param.mTreeDepth, param.mFeatureGenerateCount, param.mNu, param.mLambda);
 			mForests[i][j].Train(trainData, vecSampleIndex, mStageRandomPoint[i], samplePointPixelValue);
 		}
 	}
+	mPredictData.mMeanShape = trainData.mMeanShape;
 }
 
 bool FDRegressionTreesModel::Predict(const cv::Mat_<uchar> &image, std::vector<cv::Mat_<double> > &result, std::vector<FDBoundingBox> *pVecBox /*=NULL*/)
@@ -132,10 +135,13 @@ bool FDRegressionTreesModel::Predict(const cv::Mat_<uchar> &image, cv::Mat_<doub
 				if (node.mLeafNodeId >= 0)
 				{
 					// 每一棵数都加了，所以训练需要乘以一个Nu系数？还是直接取树数均值？
-					item.mCurrentShape += FDUtility::RelativeToReal(node.mValue, item.mBoundingBox);
+					item.mCurrentShape = FDUtility::RelativeToReal((FDUtility::RealToRelative(item.mCurrentShape, item.mBoundingBox) 
+						+ node.mValue), item.mBoundingBox);
+					//cv::print(item.mCurrentShape);
+					//std::cout << std::endl;
 					break;
 				}
-				if ((samplePointPixelValue[node.mIdx[0]] - samplePointPixelValue[node.mIdx[1]]) > node.mThreshold)
+				if (((double)samplePointPixelValue[node.mIdx[0]] - (double)samplePointPixelValue[node.mIdx[1]]) > node.mThreshold)
 				{
 					nodeId = node.mChildrenNodesId[0];
 				}
@@ -144,8 +150,6 @@ bool FDRegressionTreesModel::Predict(const cv::Mat_<uchar> &image, cv::Mat_<doub
 					nodeId = node.mChildrenNodesId[1];
 				}
 			}
-			
-
 		}
 	}
 

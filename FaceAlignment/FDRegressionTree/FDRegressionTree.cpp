@@ -132,14 +132,20 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 	{
 		FDTrainDataItem &item = vecTrainDataItem[vecSampleIndex[i]];
 		// mGroundTruthShape mCurrentShape 是图像坐标，要变换一下
-		item.mShapeResidual = item.mGroundTruthShape - item.mCurrentShape;
-		item.mShapeResidual = FDUtility::RealToRelative(item.mShapeResidual, item.mBoundingBox);
+		item.mShapeResidual = FDUtility::RealToRelative(item.mGroundTruthShape, item.mBoundingBox) - FDUtility::RealToRelative(item.mCurrentShape, item.mBoundingBox);
+#ifdef _DEBUG
+		//cv::print(item.mShapeResidual);
+#endif // _DEBUG
 		diffSum = diffSum + item.mShapeResidual;
 	}
 
 	FDRegressionNode &rootNode = mVecNodes[0];
 	rootNode.mDepth = 1;
 	rootNode.mValue = diffSum / (double)sampleCount * mNu;
+
+#ifdef _DEBUG
+	cv::print(rootNode.mValue);
+#endif // _DEBUG
 
 	std::vector<std::vector<int> > vecAllNodeSampleIndex;
 	vecAllNodeSampleIndex.resize(mMaxNodesNum);
@@ -187,6 +193,8 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		currentNode.mIdx[0] = feature.mIdx1;
 		currentNode.mIdx[1] = feature.mIdx2;
 
+		//FDLog("feature: %d. %d", feature.mIdx1, feature.mIdx2);
+
 		// update child
 		FDRegressionNode &left = mVecNodes[newNodeId];
 		FDRegressionNode &right = mVecNodes[newNodeId + 1];
@@ -198,6 +206,9 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 
 		vecAllNodeSampleIndex[newNodeId].swap(lchildren);
 		vecAllNodeSampleIndex[newNodeId + 1].swap(rchildren);
+
+		vecDiffSum[newNodeId] = leftDiffSum;
+		vecDiffSum[newNodeId + 1] = rightDiffSum;
 
 		// add child to split queue
 		stackNodeToSplit.push(newNodeId + 1);
@@ -214,16 +225,19 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		if (currentNode.mLeafNodeId < 0)
 			continue;
 
+#ifdef _DEBUG
+		//cv::print(currentNode.mValue);
+#endif // _DEBUG
 		const std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[i];
 		int nodeSampleCount = (int)currentSampleIndex.size();
 		leafSampleCount += nodeSampleCount;
 		for (int j = 0; j < nodeSampleCount; j++)
 		{
 			FDTrainDataItem &item = vecTrainDataItem[currentSampleIndex[j]];
-			item.mCurrentShape += FDUtility::RelativeToReal(currentNode.mValue, item.mBoundingBox);
+			item.mCurrentShape = FDUtility::RelativeToReal((FDUtility::RealToRelative(item.mCurrentShape, item.mBoundingBox) + currentNode.mValue), item.mBoundingBox);
 		}
 	}
-	FDLog("tree sample count: %d, leaf sample count %d, %s", sampleCount, leafSampleCount);
+	FDLog("tree sample count: %d, leaf sample count %d", sampleCount, leafSampleCount);
 	if (sampleCount != leafSampleCount)
 	{
 		FDLog("tree sample count != leaf sample count !!!!!!!!!!!!!!!!!!");
@@ -245,10 +259,9 @@ void FDRegressionTree::GenerateTestFeature(const std::vector<cv::Point2d> &point
 			if (feature.mIdx1 == feature.mIdx2) {
 				continue;
 			}
-			// point 是meanshape 中的坐标系 (-1 -1) -> (1, 1)
+			// point 是meanshape 中的坐标系
 			double dis = PT_DIS(points[feature.mIdx1], points[feature.mIdx2]);
-			// todo 对应到(0, 0) -> (1, 1)是不是要 *2， 或者调整lambda ?
-			dis = dis * 2;
+			// todo 
 			double acceptProbability = std::exp(-dis / lambda);
 			if (!(acceptProbability > randomNumGenerator.uniform((double)0.0, (double)1.0))) {
 				break;
@@ -307,14 +320,11 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 		int rightCount = sampleCount - leftCount;
 		cv::Mat_<double> tempRight = diffSum - tempLeft;
 		val = 0;
-		if (leftCount > 0)
-		{
-			val += tempLeft.dot(tempLeft) / leftCount;
-		}
-		if (rightCount > 0)
-		{
-			val += tempRight.dot(tempRight) / rightCount;
-		}
+		if (leftCount == 0 || rightCount == 0)
+			continue;
+
+		val += tempLeft.dot(tempLeft) / leftCount;
+		val += tempRight.dot(tempRight) / rightCount;
 		if (val > maxValue)
 		{
 			maxValue = val;
@@ -334,11 +344,11 @@ void FDRegressionTree::SplitNode(const FDTrainData &trainData, const std::vector
 		if (((double)pixelValue[resFeature.mIdx1] - (double)pixelValue[resFeature.mIdx2]) > resFeature.mThreshold)
 		{
 			leftDiffSum += item.mShapeResidual;
-			leftSampleIndex.push_back(i);
+			leftSampleIndex.push_back(vecSampleIndex[i]);
 		}
 		else
 		{
-			rightSampleIndex.push_back(i);
+			rightSampleIndex.push_back(vecSampleIndex[i]);
 		}
 	}
 	rightDiffSum = diffSum - leftDiffSum;

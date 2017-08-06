@@ -7,7 +7,7 @@
 #define FDLog(fmt, ...) FDUtility::Log(fmt, __VA_ARGS__)
 
 //#define FD_TEMP_DIR "E:/work/test/FaceAlignment/test/"
-#define FD_TEMP_DIR "F:/face/FaceAlignment/FaceAlignment/test"
+#define FD_TEMP_DIR "F:/face/FaceAlignment/test/"
 
 // 0: opencv,  1: libfacedetection
 #define FD_FACE_DETECTOR_TYPE 1
