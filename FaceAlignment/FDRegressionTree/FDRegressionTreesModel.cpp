@@ -6,11 +6,11 @@
 FDRegressionTreesModelParam::FDRegressionTreesModelParam()
 {
 	mStageNum = 10;
-	mTreeDepth = 4;
+	mTreeDepth = 3;
 	mTreeNumPerStage = 500;
-	mNu = 0.1;
+	mNu = 0.05;
 	mLandmarkNum = 68;
-	mShapeGenerateNumPerSample = 20; // todo check it
+	mShapeGenerateNumPerSample = 1; // todo check it
 	mLambda = 0.1;
 	mFeaturePoolSize = 400;
 	mFeatureGenerateCount = 20;
@@ -65,6 +65,9 @@ void FDRegressionTreesModel::Train(const FDRegressionTreesModelParam &param, FDT
 
 		int sampleCount = (int)trainData.mVecDataItems.size();
 		std::vector<std::vector<uchar> > samplePointPixelValue(sampleCount);
+#ifndef DEBUG
+#pragma omp parallel for
+#endif
 		for (int j = 0; j < sampleCount; j++)
 		{
 			GetPixelValue(trainData.mVecDataItems[j], trainData.mMeanShape, mVecIndex[i], mVecDelta[i], samplePointPixelValue[j]);

@@ -231,6 +231,9 @@ void FDRegressionTree::Train(FDTrainData &trainData, const std::vector<int> vecS
 		const std::vector<int> &currentSampleIndex = vecAllNodeSampleIndex[i];
 		int nodeSampleCount = (int)currentSampleIndex.size();
 		leafSampleCount += nodeSampleCount;
+#ifndef DEBUG
+#pragma omp parallel for
+#endif
 		for (int j = 0; j < nodeSampleCount; j++)
 		{
 			FDTrainDataItem &item = vecTrainDataItem[currentSampleIndex[j]];

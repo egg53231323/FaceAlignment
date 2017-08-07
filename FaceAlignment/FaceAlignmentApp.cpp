@@ -17,12 +17,12 @@ void TrainModel()
 	std::string strDir = FD_TEMP_DIR;
 	std::string cascadeClassifierModelPath = strDir + "haarcascade_frontalface_alt.xml";
 	std::vector<std::string> vecPath;
-	//vecPath.push_back(strDir + "list_afw.txt");
+	vecPath.push_back(strDir + "list_afw.txt");
 	vecPath.push_back(strDir + "list_helen.txt");
 	//vecPath.push_back(strDir + "list_helen_test.txt");
-	//vecPath.push_back(strDir + "list_lfpw.txt");
+	vecPath.push_back(strDir + "list_lfpw.txt");
 	//vecPath.push_back(strDir + "list_lfpw_test.txt");
-	//vecPath.push_back(strDir + "list_ibug.txt");
+	vecPath.push_back(strDir + "list_ibug.txt");
 	//vecPath.push_back(strDir + "list_300windoor.txt");
 	//vecPath.push_back(strDir + "list_300woutdoor.txt");
 
@@ -210,7 +210,7 @@ void TestModel_2()
 	std::string strDir = FD_TEMP_DIR;
 	std::vector<std::string> vecPath;
 	vecPath.push_back(strDir + "list_helen.txt");
-	vecPath.push_back(strDir + "list_helen_test.txt");
+	//vecPath.push_back(strDir + "list_helen_test.txt");
 	//vecPath.push_back(strDir + "list_afw.txt");
 	//vecPath.push_back(strDir + "list_ibug.txt");
 	//vecPath.push_back(strDir + "list_lfpw_test.txt");
@@ -339,7 +339,7 @@ int main()
 	}
 	else
 	{
-		int type = 2;
+		int type = 1;
 		switch (type)
 		{
 		case 0:
